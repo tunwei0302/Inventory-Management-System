@@ -3,20 +3,31 @@
 .stack
 
 .data
-    asciiArt1 db '                             _',13,10,\
-                 '                           _|=|__________',13,10,\
-                 '                          /              \',13,10,\
-                 '                         /                \',13,10,\
-                 '                        /__________________\',13,10,\
-                 '                         ||  || /--\ ||  ||',13,10,\
-                 '                         ||[]|| | .| ||[]||',13,10,\
-                 '                       ()||__||_|__|_||__||()',13,10,\
-                 '                      ( )|-|-|-|====|-|-|-|( ) ',13,10,\
-                 '                      ^^^^^^^^^^====^^^^^^^^^^^',13,10,'$'
+    asciiArt1 db '       _                 $'
+              db '     _|=|__________      $'
+              db '    /              \     $'
+              db '   /                \    $'
+              db '  /__________________\   $'
+              db '   ||  || /--\ ||  ||    $'
+              db '   ||[]|| | .| ||[]||    $'
+              db ' ()||__||_|__|_||__||()  $'
+              db '( )|-|-|-|====|-|-|-|( ) $'
+              db '^^^^^^^^^^====^^^^^^^^^^^',13,10,'$' ;25 byte per row, 10 col
     menuHead db 'Sinaran Inventory Management System',13,10,'$'
     currentDate db 'Date: $'
     currentTime db 'Time: $'
     currentDayOfWeek db 'Day: $'
+    daysOfWeek db 'Sunday   $', 'Monday   $', 'Tuesday  $', 'Wednesday$', 'Thursday $', 'Friday   $', 'Saturday $'
+    lineCount db 0
+    ascii_Buffer db 26
+    invSize db 200 ; SIZE OF STOCK
+        inv DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
+            DB "PENCIL              ", "ERASER              ", "RULER               ", "CORRECTION TAPE     ", "MARKER PEN          ",\
+             "SCISSORS            ", "NOTEBOOK            ", "MARKER              ", "PAPERCLIPS          ", "STAPLER             "   ;item name
+            DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
+            dd 4.5, 4.2, 3.9, 3.7, 6.2, 5.0, 45.5, 17.2, 11.5, 22.0, '$'    ;price
+
+            
     ;year db ?
     ;month db ?
     ;day db ?
@@ -39,15 +50,37 @@ main endp
 
 printHeader proc
     call ClearScreen
-    mov cx,11
 
 header:
-    lea dx,asciiArt1
-    call PrintString
+    mov cx,10
+
+
+    lea si,asciiArt1
+
+    mov lineCount,5
+AsciiLoop:
 
     mov ah,02h
-    mov dl, 30
+    mov bh, 0
+    mov dh, lineCount
+    mov dl, 28
     int 10h
+
+
+    lea dx,[si]
+    call PrintString
+
+    add si,26
+    inc lineCount
+
+    loop AsciiLoop
+
+    mov ah,02h
+    mov bh, 0
+    mov dh, 15
+    mov dl, 23
+    int 10h
+
     lea dx,menuHead
     call PrintString
     
@@ -60,79 +93,97 @@ printHeader endp
 
 getDateTime proc
 
-lea dx,currentDate
-call PrintString
+    lea dx,currentDate
+    call PrintString
 
-currentDay:
-    
-    mov ah,2ah  ;get current date
+    ; Get and print current date
+    mov ah, 2Ah  ; get current date
     int 21h
     mov al, dl
     aam
     mov bx, ax
     call Disp
 
-    mov dl, '/' ;print '/' between date
-    mov ah,02h
+    mov dl, '/' ; print '/'
+    mov ah, 02h
     int 21h
-currentMonth:
 
-    mov ah,2ah  ;get current date
-    int 21h
+    ; Get and print current month
     mov al, dh
     aam
     mov bx, ax
     call Disp
 
-    mov dl, '/' ;print '/' between date
-    mov ah,02h
+    mov dl, '/' ; print '/'
+    mov ah, 02h
     int 21h
 
-currentYear:
-    
-    mov ah,2ah  ;get current date
-    int 21h
-    not cx
-    inc cx
-    mov ax,cx
+    ; Get and print current year
+    mov al, ch
     aam
     mov bx, ax
     call Disp
 
-
-currentHour:
-    mov ah,2ch  ;get current time
-    int 21h
-    mov al,ch
-    aam
-    mov bx,ax
-    call Disp
-
-    mov dl, ':' ;print ':' between time
+    ; Get and print current time
     mov ah,02h
+    mov bh, 0
+    mov dh, 16
+    mov dl, 32
+    int 10h
+    lea dx,currentTime
+    call PrintString
+
+    ; Get current time
+    mov ah, 2Ch
     int 21h
 
-currentMinute:
-    mov ah,2ch  ;get current time
-    int 21h
-    mov al,cl
+    ; Print hours
+    mov al, ch
     aam
-    mov bx,ax
+    mov bx, ax
     call Disp
 
-    mov dl, ':' ;print ':' between time
+    mov dl, ':' ; print ':'
+    mov ah, 02h
+    int 21h
+
+    ; Print minutes
+    mov al, cl
+    aam
+    mov bx, ax
+    call Disp
+
+    mov dl, ':' ; print ':'
+    mov ah, 02h
+    int 21h
+
+    ; Print seconds
+    mov al, dh
+    aam
+    mov bx, ax
+    call Disp
+
+    ;Print Day of Week
+    mov ah,2Ah
+    int 21h
+    mov bx, ax
+    xor ah, ah
+    mov al, bl
+    mov cl, 10
+    mul cl
+    mov si,ax
+
     mov ah,02h
-    int 21h
+    mov bh, 0
+    mov dh, 16
+    mov dl, 65
+    int 10h
 
-currentSecond:
-    mov ah,2ch  ;get current time
-    int 21h
-    mov al,dh
-    aam
-    mov bx,ax
-    call Disp
+    lea dx,currentDayOfWeek
+    call PrintString
 
-
+    lea dx, daysOfWeek[si]
+    call PrintString
     ret
 getDateTime endp
 
@@ -170,14 +221,14 @@ ClearScreen proc
     ret
 ClearScreen endp
 
-MoveCursorMiddle proc    
+MoveCursorAscii proc    
     mov ah,02h
     mov bh, 0
-    mov dh, 12
-    mov dl, 30
+    mov dh, 5
+    mov dl, 28
     int 10h
 
     ret
-MoveCursorMiddle endp
+MoveCursorAscii endp
 
 end main
