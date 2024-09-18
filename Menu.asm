@@ -27,14 +27,6 @@
             DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
             dd 4.5, 4.2, 3.9, 3.7, 6.2, 5.0, 45.5, 17.2, 11.5, 22.0, '$'    ;price
 
-            
-    ;year db ?
-    ;month db ?
-    ;day db ?
-    ;hour db ?
-    ;minute db ?
-    ;second db ?
-
 .code
 main proc
 
@@ -102,7 +94,7 @@ getDateTime proc
     mov al, dl
     aam
     mov bx, ax
-    call Disp
+    call DisplayTime
 
     mov dl, '/' ; print '/'
     mov ah, 02h
@@ -112,7 +104,7 @@ getDateTime proc
     mov al, dh
     aam
     mov bx, ax
-    call Disp
+    call DisplayTime
 
     mov dl, '/' ; print '/'
     mov ah, 02h
@@ -122,7 +114,7 @@ getDateTime proc
     mov al, ch
     aam
     mov bx, ax
-    call Disp
+    call DisplayTime
 
     ; Get and print current time
     mov ah,02h
@@ -141,7 +133,7 @@ getDateTime proc
     mov al, ch
     aam
     mov bx, ax
-    call Disp
+    call DisplayTime
 
     mov dl, ':' ; print ':'
     mov ah, 02h
@@ -151,7 +143,7 @@ getDateTime proc
     mov al, cl
     aam
     mov bx, ax
-    call Disp
+    call DisplayTime
 
     mov dl, ':' ; print ':'
     mov ah, 02h
@@ -161,7 +153,7 @@ getDateTime proc
     mov al, dh
     aam
     mov bx, ax
-    call Disp
+    call DisplayTime
 
     ;Print Day of Week
     mov ah,2Ah
@@ -187,7 +179,7 @@ getDateTime proc
     ret
 getDateTime endp
 
-Disp proc
+DisplayTime proc
 
     mov dl, bh
     add dl,'0'
@@ -200,7 +192,7 @@ Disp proc
 
     ret
 
-Disp endp
+DisplayTime endp
 
 PrintString proc
     mov ah, 09h        
