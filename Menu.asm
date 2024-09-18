@@ -19,26 +19,81 @@
     currentDayOfWeek db 'Day: $'
     daysOfWeek db 'Sunday   $', 'Monday   $', 'Tuesday  $', 'Wednesday$', 'Thursday $', 'Friday   $', 'Saturday $'
     lineCount db 0
-    ascii_Buffer db 26
-    invSize db 200 ; SIZE OF STOCK
-        inv DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
-            DB "PENCIL              ", "ERASER              ", "RULER               ", "CORRECTION TAPE     ", "MARKER PEN          ",\
-             "SCISSORS            ", "NOTEBOOK            ", "MARKER              ", "PAPERCLIPS          ", "STAPLER             "   ;item name
-            DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
-            dd 4.5, 4.2, 3.9, 3.7, 6.2, 5.0, 45.5, 17.2, 11.5, 22.0, '$'    ;price
-
+    ascii_Buffer db 26 dup(1)
+    invSize equ 200 ; SIZE OF STOCK
+        inv_Id DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
+        inv_name    DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
+             "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
+        inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
+        inv_price    dd 4.5, 4.2, 3.9, 3.7, 6.2, 5.0, 45.5, 17.2, 11.5, 22.0    ;price
+    mainMenuOption db 13,10,'Inventory Management System',13,10
+               db '===========================',13,10
+               db '1. Restock',13,10
+               db '2. Sell item',13,10
+               db '3. Edit item',13,10
+               db '4. Calculate Total',13,10
+               db 'Enter your choice > $'
+    inputError db 13,10,'Input Invalid! Please try again later.',13,10,'$'
+    sellItemMenu db 13,10,'==========================='
+                 db 13,10,'        SELLING MENU'
+                 db 13,10,'===========================$'
+    enterChoice db 13,10,'Enter your choice > $'
+    sellItem_jumpTable db ''
 .code
 main proc
 
     mov ax, @data
     mov ds, ax
 
-    call printHeader
-
+    ;call printHeader
+    call clearScreen
+    call menu
+    
+    
+    
     mov ah,4ch
     int 21h
 
 main endp
+
+menu proc
+    lea dx,mainMenuOption
+    mov ah,09h
+    int 21h
+    
+    mov ah,01h
+    int 21h
+
+    sub al,'0'
+    cmp al,1
+    jne skip1
+    jmp restock
+skip1:
+    cmp al,2
+    jne skip2
+    jmp sellItem
+skip2:
+    cmp al,3
+    jne skip3
+    jmp editItem
+skip3:
+    cmp al,4
+    jne skip4
+    jmp calculateTotal
+skip4:
+
+    lea dx,[inputError]
+    mov ah,09h
+    int 21h
+    jmp menu
+
+
+
+    
+
+
+    ret
+menu endp
 
 printHeader proc
     call ClearScreen
@@ -82,6 +137,61 @@ AsciiLoop:
 
 
 printHeader endp
+
+restock proc
+    ret
+restock endp
+
+
+sellItem proc
+    call clearScreen
+
+    lea dx,[sellItemMenu]
+    mov ah,09h
+    int 21h
+    
+    mov cx,10
+    mov si,0
+itemList:
+    mov ax,si
+    mov bx,20
+    mul bx
+
+    mov bx,si
+    inc bx
+    add bx,'0'
+
+    mov dx,bx
+    add dx,'0'
+    mov ah,02h
+    int 21h
+
+    lea dx,inv_name
+    add dx,ax
+    mov ah ,09h
+    int 21h
+
+    mov dx,13
+    mov ah,02h
+    int 21h
+    mov dx,10
+    mov ah,02h
+    int 21h
+
+    inc si
+    loop itemlist
+
+    ret
+sellItem endp
+
+
+editItem proc
+    ret
+editItem endp
+
+calculateTotal proc
+    ret
+calculateTotal endp
 
 getDateTime proc
 
@@ -178,6 +288,33 @@ getDateTime proc
     call PrintString
     ret
 getDateTime endp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 DisplayTime proc
 

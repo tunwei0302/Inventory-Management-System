@@ -105,7 +105,7 @@ INPUT_USERNAME ENDP
 INPUT_PASSWORD PROC
     ; Prompt and capture the password
     MOV DX, OFFSET password_prompt
-    CALL PRINT_STRING
+    CALL PRINT_STRING   
     LEA DX, current_password
     MOV AH, 0AH
     INT 21H
