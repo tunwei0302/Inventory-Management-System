@@ -15,9 +15,11 @@
     stock_buffer db 6, 0, 0, 0, 0, 0, 0  ; Buffer for stock level string
     ten dw 10
     newline db 0Dh, 0Ah, '$'
+    amount db ?
+
 
     ; Buffers
-    input_buffer db 5, 0, 0, 0, 0, 0  ; Buffer for input (max 4 digits + null terminator)
+    input_buffer db 5 dup('$')  ; Buffer for input (max 4 digits + null terminator)
 
 .code
  ; ------------------------------------Restock Page------------------------------------
@@ -87,11 +89,12 @@
 
         ; Convert the input string to a number
         call string_to_number
-
-        ; Validate the number (assuming max stock level is 9999)
+        lea dx,amount
+        mov dx, ax
+        ; Validate the number (assuming max stock level is 999)
         cmp ax, 0
         jl invalid_amount
-        cmp ax, 9999
+        cmp ax, 999
         jg invalid_amount
 
         ret
@@ -106,22 +109,26 @@
 
     ; Convert string in input_buffer to a number in AX
     string_to_number PROC
-        mov si, offset input_buffer + 1 ; SI points to the first digit
+        mov si, offset input_buffer + 2 ; SI points to the first digit
         xor ax, ax ; Clear AX (result)
         xor cx, cx ; Clear CX (multiplier)
 
+        mov cx, 10
     convert_loop_1:
         mov bl, [si] ; Load the current character
-        cmp bl, 0Dh ; Check for carriage return (end of input)
+        cmp bl, '$' ; Check for carriage return (end of input)
         je end_convert
         sub bl, '0' ; Convert ASCII to digit
-        mov cx, 10
         mul cx ; Multiply AX by 10
         add ax, bx ; Add the digit to AX
         inc si ; Move to the next character
         jmp convert_loop_1
 
     end_convert:
+        mov dx,ax 
+        sub dx,'0'
+        mov ah,02h
+        int 21h
         ret
     string_to_number ENDP
 
@@ -139,7 +146,8 @@
         add_stock:
             ; Add amount to current stock, check against max stock
             mov ax, current_stock
-            add ax, bx
+            lea dx,[amount]
+            add ax, dx
             cmp ax, max_stock
             jg stock_overflow
 
