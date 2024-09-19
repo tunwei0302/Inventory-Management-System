@@ -25,7 +25,7 @@
         inv_name    DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
              "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
         inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
-        inv_price    dd 4.5, 4.2, 3.9, 3.7, 6.2, 5.0, 45.5, 17.2, 11.5, 22.0    ;price
+        inv_price    dd 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
     mainMenuOption db 13,10,'Inventory Management System',13,10
                db '===========================',13,10
                db '1. Restock',13,10
@@ -229,28 +229,44 @@ convert_loop:
     jne convert_loop
 
     sub ax,1
-    xor bx,bx
-    mov bx,20 
+
+    mov bx,2
+    lea si,inv_quantity
     mul bx
+    add si,ax
+    mov dx,[si]
+    
 
-    lea si,inv_name
-    add si,ax 
-    lea dx,[si] 
 
-    mov  ah,09h 
-    int 21h
+
+    ;xor bx,bx
+    ;mov bx,20 
+    ;mul bx
+;
+    ;lea si,inv_name
+    ;add si,AX
+
+
+
+
+    ;lea si,inv_name
+    ;add si,ax 
+    ;lea dx,[si] 
+
+    ;mov  ah,09h 
+    ;int 21h
 
 
 
 
     
     ;sub al,'0'
-    dec al
-
-    mov dx,ax
-
-    mov ah,02h
-    int 21h
+    ;dec al
+;
+    ;mov dx,ax
+;
+    ;mov ah,02h
+    ;int 21h
     ;xor ah,ah
     ;xor bx,bx
     ;mov bl,20
