@@ -191,6 +191,9 @@
             cmp cl, 0Dh
             je convert_done
             sub cl, '0'
+           
+            cmp cl, 9
+            jg convert_failed 
             mov cx, 10
             mul cx
             add ax, cx
@@ -201,6 +204,13 @@
             ; Store the converted number in BX
             mov bx, ax
             ret
+        
+        convert_failed:
+            lea dx, invalid_amount_msg + 2
+            mov ah, 09h
+            int 21h
+            ret
+
         convert_input_to_number ENDP
 
         print_stock_level PROC
