@@ -36,9 +36,10 @@
     inputError db 13,10,'Input Invalid! Please try again later.',13,10,'$'
     sellItemMenu db 13,10,'==========================='
                  db 13,10,'        SELLING MENU'
-                 db 13,10,'===========================$'
+                 db 13,10,'===========================',13,10,'$'
     enterChoice db 13,10,'Enter your choice > $'
     sellItem_jumpTable db ''
+    buffer db 20 dup('$')
 .code
 main proc
 
@@ -153,18 +154,40 @@ sellItem proc
     mov cx,10
     mov si,0
 itemList:
-    mov ax,si
-    mov bx,20
-    mul bx
 
     mov bx,si
     inc bx
-    add bx,'0'
+    ;add bx,'0'
+
+    cmp bx,9
+    jle singleDigit
+    mov dx,'1'
+    mov ah,02h
+    int 21h
+
+    
+    ;mov si,0
+    ;mov dx,si
+    ;add dx,'0'
+    ;mov ah,02h
+    ;int 21h
+    mov bx,0
+
+singleDigit:
+
 
     mov dx,bx
     add dx,'0'
     mov ah,02h
     int 21h
+    
+    mov dx,2eh
+    mov ah,02h
+    int 21h
+
+    mov ax,si
+    mov bx,20
+    mul bx
 
     lea dx,inv_name
     add dx,ax
@@ -180,6 +203,56 @@ itemList:
 
     inc si
     loop itemlist
+
+
+    lea dx,enterChoice
+    mov ah,09h
+    int 21h
+
+    lea dx,buffer
+    mov ah,0ah
+    int 21h
+
+
+    lea si,buffer+2
+    xor ax,ax
+    mov cx,10
+
+convert_loop:
+    mov bl,[si]
+    sub bl,'0'
+    mul cx
+    ;add ax,bl
+    inc si
+    cmp byte ptr [si],0Dh
+    jne convert_loop
+
+    xor dx,dx
+    div bx
+    add al,'0'
+
+
+    
+    ;sub al,'0'
+    dec al
+
+    mov dx,ax
+
+    mov ah,02h
+    int 21h
+    ;xor ah,ah
+    ;xor bx,bx
+    ;mov bl,20
+    ;mul bl
+;
+;
+;
+    ;lea si,inv_name
+    ;add si,ax
+    ;
+    ;lea dx,[si]
+    ;mov ah,09h
+    ;int 21h
 
     ret
 sellItem endp
