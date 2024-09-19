@@ -4,12 +4,12 @@
 
 .data
 
-invSize db 200 ; SIZE OF STOCK
-        inv DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
-            DB "PENCIL              ", "ERASER              ", "RULER               ", "CORRECTION TAPE     ", "MARKER PEN          ",\
-             "SCISSORS            ", "NOTEBOOK            ", "MARKER              ", "PAPERCLIPS          ", "STAPLER             "   ;item name
-            DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
-            dd 4.5, 4.2, 3.9, 3.7, 6.2, 5.0, 45.5, 17.2, 11.5, 22.0, '$'    ;price
+invSize equ 200 ; SIZE OF STOCK
+        inv_Id DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
+        inv_name    DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
+             "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
+        inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
+        inv_price    dd 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200    ;price
 
 ;  TOTAL INVENTORY VALUE
     repHeader       db 13, 10, '------------------- Total Inventory Value -------------------$'
@@ -28,14 +28,9 @@ invSize db 200 ; SIZE OF STOCK
     ; EXIT
     exitMsg       db 13, 10, 'Exiting.....', 13, 10, '$'
 
-    totalPrice DW ? ; ? = uninitialized value and not specified at that point
+    totalPrice DW 0
 
 .code
-    Addition macro
-        ADD BP, 10
-        ADD SI, 2   ; Increment SI to point to next word
-        endm
-
     printColor macro
         PUSH AX     ; Preserve registers
         PUSH BX
@@ -120,13 +115,12 @@ MAIN PROC
         
         ; Set base pointer to zero
         MOV BP, 0
-        ; Initialize source index, BX, and destination index, DI
-        LEA SI, inv                 ; Get address of inventory data into SI
-        MOV BX, SI
 
-        loopReport:                 ; Begin loop to see sales report
-            MOV AX, [SI]            ; Load item ID from inventory
-            CMP AX, 10              ; Check if end of inventory is reached
+        MOV	CL, 10      ;Loop 10 times
+        MOV SI, 0
+
+        loopReport:                 ; Begin loop to see report
+            MOV AX, [inv_Id + SI]            ; Load item ID from inventory
             JA doneReport           ; End loop if end store 
 
             CALL printInt           ; Print item ID
@@ -135,38 +129,38 @@ MAIN PROC
             CALL printSpace       
             
             ; Print item name
-            MOV DX, offset inv + 20
-            ADD DX, BP              ; Add base pointer to point to the next item name
+            LEA DX, [inv_name + BP]
             CALL printString        ; Print the ITEM name
             CALL printTab
 
-            ; Sales Number
-            MOV AX, [BX + 220]            ; Load sales number
+            ; Quantity
+            MOV AX, [inv_quantity + SI]           ; Load quantity
             CALL printInt           ; Print sales number
             CALL printTab
             CALL printTab
 
             ; Unit price
-            MOV AX, [BX + 240]       ; Load unit price
-            CALL printInt           ; Print unit price
-            CALL printTab
-            CALL printTab
+            ;MOV AX, [inv_price + SI * 4]      ; Load unit price
+            ;CALL printDouble           ; Print unit price
+            ;CALL printTab
+            ;CALL printTab
 
             ; Calculate total earnings for the item
-            MOV CX, [BX + 220]            ; Load quantity
-            MOV AX, [BX + 240]            ; Load unit price
-            MUL CX                  ; Multiply to get total price for the item
+            ;MOV CX, [inv_quantity + SI]           ; Load quantity
+            ;MOV AX, [inv_price + SI * 4]      ; Load unit price
+            ;MOV DX, [inv_price + SI * 4 + 2] 
+            ;MUL CX                  ; Multiply to get total price for the item
 
             ; Add earnings to the total sales
             ADD [totalPrice], AX
-            CALL printInt           ; Print total price for the item
+            CALL printDouble           ; Print total price for the item
             CALL printNextLine
             ; Increment pointers for next iteration
             
-            Addition al
-            ADD BX, 2
-            ADD DI, 2
-            JMP loopReport
+            ADD BX, 23
+            ADD si, 2
+            DEC CL
+            JNZ loopReport
 
         doneReport:
             LEA DX, invValue           ; Load address of the total sales label string
@@ -230,6 +224,44 @@ MAIN PROC
         MOV BX, 10        ; Divisor: set BX to 10
         XOR CX, CX        ; Counter: Clear CX for digit count
 
+        ; CONVERT WORD TO STRING
+        convertLoop:
+            XOR DX, DX            ; Clear the high byte of DX
+            DIV BX                ; Divide AX by BX
+            ADD DL, '0'           ; Convert the remainder to ASCII and 
+            PUSH DX               ; Push it onto the stack
+            INC CX                ; Increment the digit counter
+            CMP AX, 0             ; Check if AX is zero (end of conversion)
+            JNE convertLoop       ; Repeat loop if not zero
+
+        loopInt:
+            POP DX                ; Pop the next digit from the stack and print it
+            MOV AH, 02            ; Write the character to the output
+            INT 21h               
+            DEC CX                ; Decrement the digit counter
+            CMP CX, 0             ; Check if all digits have been printed
+            JNE loopInt           ; Repeat loop if not all digits printed
+            POP BX                ; Restore BX from the stack and return
+            RET
+    
+    printDouble:
+        PUSH AX
+
+        MOV BX, 100
+        DIV BX
+
+        CALL printInt
+        
+        MOV DL, '.'
+        MOV AH, 02h
+        INT 21H
+
+        MOV AX, DX
+        CALL printInt
+        
+        POP DX
+        POP AX
+        RET
     exit:
         MOV AH, 4Ch
         INT 21h
