@@ -45,7 +45,7 @@ main proc
 
     mov ax, @data
     mov ds, ax
-
+    
     ;call printHeader
     call clearScreen
     call menu
@@ -217,19 +217,30 @@ singleDigit:
     lea si,buffer+2
     xor ax,ax
     mov cx,10
+    xor bx,bx
 
 convert_loop:
     mov bl,[si]
     sub bl,'0'
-    mul cx
-    ;add ax,bl
+    mul cx  ;mul ax with cx, store at ax
+    add ax,bx
     inc si
     cmp byte ptr [si],0Dh
     jne convert_loop
 
-    xor dx,dx
-    div bx
-    add al,'0'
+    sub ax,1
+    xor bx,bx
+    mov bx,20 
+    mul bx
+
+    lea si,inv_name
+    add si,ax 
+    lea dx,[si] 
+
+    mov  ah,09h 
+    int 21h
+
+
 
 
     
