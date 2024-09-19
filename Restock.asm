@@ -15,7 +15,8 @@
     stock_buffer db 6, 0, 0, 0, 0, 0, 0  ; Buffer for stock level string
     ten dw 10
     newline db 0Dh, 0Ah, '$'
-    amount db ?
+    amount dw ?
+    action db ?
 
 
     ; Buffers
@@ -54,6 +55,7 @@
         mov ah, 01h ; Read character from standard input
         int 21h ; Store input in AL
         mov bl, al  ; Store action in bl (A for Add, R for Reduce)
+        mov action,bl
 
         ; Validate input
         cmp bl, 'A'
@@ -89,8 +91,8 @@
 
         ; Convert the input string to a number
         call string_to_number
-        lea dx,amount
-        mov dx, ax
+        mov amount,ax
+
         ; Validate the number (assuming max stock level is 999)
         cmp ax, 0
         jl invalid_amount
@@ -109,14 +111,14 @@
 
     ; Convert string in input_buffer to a number in AX
     string_to_number PROC
-        mov si, offset input_buffer + 2 ; SI points to the first digit
+        lea si, input_buffer + 2 ; SI points to the first digit
         xor ax, ax ; Clear AX (result)
         xor cx, cx ; Clear CX (multiplier)
-
+        xor bx,bx
         mov cx, 10
     convert_loop_1:
         mov bl, [si] ; Load the current character
-        cmp bl, '$' ; Check for carriage return (end of input)
+        cmp bl, 0Dh ; Check for carriage return (end of input)
         je end_convert
         sub bl, '0' ; Convert ASCII to digit
         mul cx ; Multiply AX by 10
@@ -125,10 +127,8 @@
         jmp convert_loop_1
 
     end_convert:
-        mov dx,ax 
-        sub dx,'0'
-        mov ah,02h
-        int 21h
+    
+
         ret
     string_to_number ENDP
 
@@ -136,6 +136,8 @@
     ; Update the stock level based on user input
     update_stock PROC
         ; Check if the user wants to add or reduce stock
+        mov bl,[action]
+
         cmp bl, 'A'
         je add_stock
         cmp bl, 'R'
@@ -146,7 +148,9 @@
         add_stock:
             ; Add amount to current stock, check against max stock
             mov ax, current_stock
-            lea dx,[amount]
+            ;sub ax,'0'
+            mov dx,[amount]
+            ;sub dx,'0'
             add ax, dx
             cmp ax, max_stock
             jg stock_overflow
