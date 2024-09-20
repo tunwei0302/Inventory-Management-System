@@ -88,6 +88,7 @@
     tempInvQty DW ?
     tempInvIndex dw ?
     sellAmount dw ?
+    invHead db 'ID  NAME          QUANTITY   PRICE',13,10,'$'
 
     ; Edit Item
     edit_menu           db 13, 10, '+==========+==========+'

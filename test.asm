@@ -85,6 +85,7 @@
     tempInvQty DW ?
     tempInvIndex dw ?
     sellAmount dw ?
+    invHead db 'ID  NAME          QUANTITY   PRICE',13,10,'$'
 
     prompt_selectNo     db 13, 10, 'Select Item No [1 - 10] [Enter R to Return]: $'
 
@@ -818,7 +819,9 @@ editMenu endp
 edit_item_name_page proc
     edit_name1:
         call clearScreen
-        call itemLists
+        mov ah,13
+        int 21h
+        call itemList
         call get_name_offset
         mov dx, offset prev_name
         call PrintString
@@ -897,7 +900,7 @@ endp
 
 edit_item_price_page proc
     edit_price1:
-        call itemLists
+        call itemList
         call get_price_quantity_offset
         lea di, inv_price
         add di, ax
@@ -1024,7 +1027,7 @@ edit_item_price_page endp
 
 edit_item_quantity_page proc
     edit_quantity1:
-        call itemLists
+        call itemList
         ; mov dx, offset item_selected
         ; call PrintString
         
@@ -1454,13 +1457,11 @@ num_2_str endp
 itemList proc
     mov cx,10
     mov si,0
-    
     lea dx,invHead
     mov ah,09h
     int 21h
 
 itemLists:
-    
 
     mov bx,si
     inc bx
@@ -1580,9 +1581,10 @@ singleDigit:
     inc si
     dec cx
     cmp cx,0
-    je skip6
+    je skip7
     jmp itemLists
-
+skip7:
     ret
 itemList endp
+
 end main
