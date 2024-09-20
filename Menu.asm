@@ -433,14 +433,7 @@ singleDigit:
     mov cx,10
     xor bx,bx
 
-convert_loop:
-    mov bl,[si]
-    sub bl,'0'
-    mul cx  ;mul ax with cx, store at ax
-    add ax,bx
-    inc si
-    cmp byte ptr [si],0Dh
-    jne convert_loop
+    CALL convert_loop
 
     sub ax,1
 
@@ -450,6 +443,7 @@ convert_loop:
     add si,ax
     mov cx,[si]
 
+    ;check quantity
     lea dx, [si]
     mov ah, 09h
     int 21h
@@ -474,6 +468,7 @@ convert_loop:
     sub cx, ax
     mov [si], cx
 
+    ;check quantity
     lea dx, [si]
     mov ah, 09h
     int 21h
@@ -788,6 +783,17 @@ delete_item_page endp
 calculateTotal proc
     ret
 calculateTotal endp
+
+convert_loop proc
+    mov bl,[si]
+    sub bl,'0'
+    mul cx  ;mul ax with cx, store at ax
+    add ax,bx
+    inc si
+    cmp byte ptr [si],0Dh
+    jne convert_loop
+    ret
+convert_loop endp
 
 getDateTime proc
 
