@@ -20,6 +20,31 @@
     daysOfWeek db 'Sunday   $', 'Monday   $', 'Tuesday  $', 'Wednesday$', 'Thursday $', 'Friday   $', 'Saturday $'
     lineCount db 0
     ascii_Buffer db 26 dup(1)
+
+    ; Login
+    username        db "admin$", 0 
+    password        db "1234$", 0
+
+    input_username  db 20
+                    db 0 
+                    db 20 dup(0)
+
+    input_password  db 20
+                    db 0 
+                    db 20 dup(0)
+
+    loginheader     db 13, 10, '+============================+'
+                    db 13, 10, '         Login Menu'
+                    db 13, 10, '+============================+$'
+
+    username_prompt db 13, 10, "Enter Username [Enter E to Exit]: $"
+    password_prompt db 13, 10, "Enter Password: $"
+    
+    success_msg     db 13, 10, 'Login successful!$'
+    fail_msg        db 13, 10, 'Login failed! Try again.$'
+
+    exit_con        db 13, 10, 'Are you sure you want to EXIT THE SYSTEM !!! [Y=yes : N=No]: $'
+
     invSize equ 200 ; SIZE OF STOCK
         inv_Id DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
         inv_name    DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
@@ -40,22 +65,179 @@
     enterChoice db 13,10,'Enter your choice > $'
     sellItem_jumpTable db ''
     buffer db 20 dup('$')
+
+    input_error db 13, 10, 'Input Error ! Please Try Again !!$'
+    press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
+    new_line db 13, 10, '$'
 .code
 main proc
 
     mov ax, @data
     mov ds, ax
     
-    ;call printHeader
-    call clearScreen
-    call menu
+    start:
+        ;call printHeader
+        call loginpage
+        cmp al, 0
+        je exit
+
+        call menu
+        jmp start
     
-    
-    
-    mov ah,4ch
-    int 21h
+    exit:
+        mov ah,4ch
+        int 21h
 
 main endp
+
+loginpage proc 
+    login:
+        call clearScreen
+        call MoveCursorAscii
+
+        ; Clear username buffer
+        lea di, input_username + 2       ; Point to the start of the input buffer
+        mov cx, 20                       ; Set CX to the size of the buffer (20 bytes)
+        call clear_login_buffer
+
+        ; Clear password buffer
+        lea di, input_password + 2       ; Point to the start of the password buffer
+        mov cx, 20                       ; Set CX to the size of the buffer (20 bytes)
+        call clear_login_buffer
+
+        mov dx, offset loginheader       ; Print Login Header
+        call PrintString
+        jmp enter_name
+
+    validate_login:               
+        ; Check username
+        lea si, [username]               ; Load address of stored username into SI
+        lea di, [input_username+2]       ; Load address of input username into DI
+        call checkLogin
+        cmp al, 0                        ; Check if return value is 0 (failure)
+        je login
+
+        ; Check password
+        lea si, [password]               ; Load address of stored password into SI
+        lea di, [input_password+2]       ; Load address of input password into DI
+        call checkLogin
+        cmp al, 0                        ; Check if return value is 0 (failure)
+        je login
+
+        mov ah, 09h
+        mov dx, offset success_msg       ; Print Successful Login msg
+        int 21h
+        mov dx, offset new_line
+        int 21h
+        mov dx, offset new_line
+        int 21h
+
+        call system_pause
+        mov al, 1
+        ret
+
+    exit_confirmation:                   ; Check User Exit Confirmation
+        mov dx, offset exit_con
+        call PrintString
+        mov ah, 01H
+	    int 21H    
+        cmp al, "Y"
+        je exit_login
+        cmp al, "y"
+        je exit_login
+        cmp al, "N"
+        je login
+        cmp al, "n"
+        je login
+        jne wrong_input
+
+    enter_name:
+        mov dx, offset username_prompt   ; Prompt for username
+        call PrintString
+
+        mov ah, 0Ah
+        lea dx, input_username
+        int 21h
+
+        ; Add null terminator for username input
+        mov al, [input_username+1]       ; Number of characters entered is at input_user+1
+        xor ah, ah
+        lea si, [input_username+2]       ; Point to the first character of the input
+        add si, ax                       ; Move to the end of the entered username
+        mov byte ptr [si], '$'           ; Add the '$' to terminate the string
+
+        cmp [input_username+2], 'E'
+        je exit_confirmation
+        cmp [input_username+2], 'e'
+        je exit_confirmation
+
+    enter_password:
+        mov dx, offset password_prompt   ; Prompt for password
+        call PrintString
+
+        mov ah, 0Ah
+        lea dx, input_password
+        int 21h
+
+        ; Add null terminator for password input
+        mov al, [input_password+1]       ; Number of characters entered is at input_password+1
+        xor ah, ah
+        lea si, [input_password+2]       ; Point to the first character of the input
+        add si, ax
+        mov byte ptr [si], '$'           ; Add the '$' to terminate the string
+
+        jmp validate_login
+
+    wrong_input:                         ; Print Input Error Msg for User to Know
+        mov ah, 09h 
+        mov dx, offset input_error
+        int 21h 
+        
+        mov ah, 09h 
+        mov dx, offset new_line
+        int 21h
+        mov dx, offset new_line
+        int 21h
+        jmp exit_confirmation
+
+    exit_login:
+        mov al,0
+        ret
+endp
+
+checklogin proc
+    cld
+    mov cx, 20                ; Set a reasonable maximum length for comparison
+    compare_loop:
+        mov al, [si]              ; Load byte from str1 into AL
+        mov bl, [di]              ; Load byte from str2 into BL
+        cmp al, bl                ; Compare the two characters
+        jne failed                ; If characters differ, strings are not equal
+        test al, al               ; Check if we reached the null terminator (0)
+        jz equal                  ; If null terminator, strings matched
+        inc si                    ; Move to the next character in str1
+        inc di                    ; Move to the next character in str2
+        loop compare_loop         ; Continue until CX reaches 0 (unnecessary for fixed length)
+
+    equal:
+        mov al, 1
+        ret                       ; Return if strings match
+
+    failed:
+        ; Print failure message
+        mov ah, 09h
+        mov dx, offset fail_msg
+        int 21h
+        mov dx, offset new_line
+        int 21h
+        mov dx, offset new_line
+        int 21h
+
+        call system_pause
+        mov al, 0
+        ret
+
+endp
 
 menu proc
     lea dx,mainMenuOption
@@ -416,6 +598,15 @@ getDateTime endp
 
 
 
+clear_login_buffer proc 
+    clear_buffer:
+        mov byte ptr [di], 0         ; Set each byte to 0
+        inc di                       ; Move to the next byte
+        loop clear_buffer            ; Repeat until CX is 0
+    
+    ret
+endp
+
 DisplayTime proc
 
     mov dl, bh
@@ -449,6 +640,16 @@ ClearScreen proc
 
     ret
 ClearScreen endp
+
+system_pause proc
+    mov ah, 09h
+    mov dx, offset press_enter
+    int 21h
+    mov ah, 0ah
+    int 21h
+
+    ret
+endp
 
 MoveCursorAscii proc    
     mov ah,02h

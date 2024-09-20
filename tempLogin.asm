@@ -32,6 +32,22 @@ loginpage:
     jmp done
 
 login:
+    ; Clear input_user buffer manually (replace rep stosb)
+    lea di, input_user + 2       ; Point to the start of the input buffer
+    mov cx, 20                   ; Set CX to the size of the buffer (20 bytes)
+clear_user_buffer:
+    mov byte ptr [di], 0         ; Set each byte to 0
+    inc di                       ; Move to the next byte
+    loop clear_user_buffer        ; Repeat until CX is 0
+
+    ; Clear input_password buffer manually (replace rep stosb)
+    lea di, input_password + 2   ; Point to the start of the password buffer
+    mov cx, 20                   ; Set CX to the size of the buffer (20 bytes)
+clear_password_buffer:
+    mov byte ptr [di], 0         ; Set each byte to 0
+    inc di                       ; Move to the next byte
+    loop clear_password_buffer    ; Repeat until CX is 0
+
     ; Prompt for username
     mov ah, 09h
     mov dx, offset username_prompt
@@ -64,6 +80,31 @@ login:
     add si, ax
     mov byte ptr [si], '$'      ; Add the '$' to terminate the string
 
+    mov ah, 09h
+    mov dx, offset new_line
+    int 21h
+    lea dx, input_user+2
+    mov ah, 09h
+    int 21h
+    mov ah, 09h
+    mov dx, offset new_line
+    int 21h
+    lea dx, user
+    mov ah, 09h
+    int 21h
+    mov ah, 09h
+    mov dx, offset new_line
+    int 21h
+    lea dx, input_password+2
+    mov ah, 09h
+    int 21h
+    mov ah, 09h
+    mov dx, offset new_line
+    int 21h
+    lea dx, password
+    mov ah, 09h
+    int 21h
+
     ; Check username
     lea si, [user]            ; Load address of stored username into SI
     lea di, [input_user+2]    ; Load address of input username into DI
@@ -77,9 +118,13 @@ login:
     mov ah, 09h
     mov dx, offset success_msg
     int 21h
-    jmp done
+    mov dx, offset new_line
+    int 21h
+    jmp login
+    ; jmp done
 
 equal:
+    cld
     ret                       ; Return if strings match
 
 checkLogin:
@@ -105,7 +150,7 @@ failed:
     int 21h
     mov dx, offset new_line
     int 21h
-    jmp loginpage             ; Go back to login page
+    jmp login             ; Go back to login page
 
 done:
     mov ah, 4Ch               ; Exit program
