@@ -62,6 +62,12 @@
                         db '5. Logout', 13, 10
                         db 'Enter your choice > $'
     inputError          db 13,10,'Input Invalid! Please try again later.',13,10,'$'
+    restockMenu         db 13, 10, '+============================+'
+                        db 13, 10, '         RESTOCK MENU'
+                        db 13, 10, '+============================+',13,10,'$'
+    res_enterChoice     db 13,10,'Enter your choice of item to restock > $'
+    res_enterQuantity        db 13,10,'Enter Quantity to restock > $'
+
     sellItemMenu        db 13,10,'==========================='
                         db 13,10,'        SELLING MENU'
                         db 13,10,'===========================',13,10,'$'
@@ -347,7 +353,167 @@ AsciiLoop:
 printHeader endp
 
 restock proc
+    call clearScreen
+
+    lea dx, [restockMenu]
+    mov ah, 09h ; Print the restock menu
+    int 21h ; Call DOS interrupt
+    
+    mov cx, 10 ; Set the loop counter to 10
+    mov si, 0 ; Set the index to 0
+
+res_itemList:
+
+    mov bx,si
+    inc bx
+
+    cmp bx,9
+    jle res_singleDigit
+    mov dx,'1'
+    mov ah,02h
+    int 21h
+
+    ;mov si,0
+    ;mov dx,si
+    ;add dx,'0'
+    ;mov ah,02h
+    ;int 21h
+    mov bx,0
+
+res_singleDigit:
+
+    mov dx,bx
+    add dx,'0'
+    mov ah,02h
+    int 21h
+    
+    mov dx,2eh
+    mov ah,02h
+    int 21h
+
+    mov ax,si
+    mov bx,20
+    mul bx
+
+    lea dx,inv_name
+    add dx,ax
+    mov ah ,09h
+    int 21h
+
+    mov dx,9
+    mov ah,02h
+    int 21h
+
+    xor bx,bx
+    mov bx,2
+    xor ax,ax
+    mov ax,si
+    mul bx
+    
+    mov count,si
+
+    lea si,inv_quantity
+    add si,ax
+    xor ax,ax
+    mov ax,[si]
+    
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di                  
+
+    call Convertdb
+
+    xor dx,dx
+    xor ax,ax
+    ;new line
+    mov dx,13
+    mov ah,02h
+    int 21h
+    mov dx,10
+    int 21h
+
+    mov si,count
+    inc si
+    loop res_itemlist
+
+    lea dx,res_enterChoice
+    mov ah,09h
+    int 21h
+
+    lea dx,buffer
+    mov ah,0ah
+    int 21h
+
+    lea si,buffer+2
+    xor ax,ax
+    mov cx,10
+    xor bx,bx
+
+    CALL convert_loop
+
+    sub ax,1
+
+    mov bx,2
+    lea si,inv_quantity
+    mul bx
+    add si,ax
+    mov cx,[si]
+
+res_enterQty:
+    lea dx,res_enterQuantity
+    mov ah,09h
+    int 21h
+
+    lea dx,buffer
+    mov ah,0ah
+    int 21h
+
+    lea si,buffer+2
+    xor ax,ax
+    xor bx,bx
+
+    CALL convert_loop
+
+    cmp cx,ax
+    jl res_invalidQty
+
+    sub cx, ax
+    mov [si], cx
+
+    CALL double_new_line
+
+    ;display quantity
+    mov ax,[si]
+    lea di,buffer+5
+    dec di
+
+convert_ascii_loop:
+    xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
+    mov bx, 10              ; Dividing by 10 to extract the least significant digit
+    div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
+    add dl, '0'             ; Convert the remainder to ASCII by adding '0' (48)
+    mov [di], dl            ; Store the ASCII character in the buffer
+    dec di                  ; Move the pointer to the next position
+    test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
+    jnz convert_ascii_loop         ; If AX is not zero, continue
+    
+    ; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    call double_new_line
+    CALL system_pause
+
     ret
+
+res_invalidQty:
+    lea dx, invalidQty_msg
+    mov ah, 09H 
+    int 21h
+
+    ret
+    
 restock endp
 
 
@@ -486,7 +652,7 @@ enterQty:
     lea di,buffer+5
     dec di
 
-convert_ascii_loop:
+res_convert_ascii_loop:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
     mov bx, 10              ; Dividing by 10 to extract the least significant digit
     div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
@@ -494,7 +660,7 @@ convert_ascii_loop:
     mov [di], dl            ; Store the ASCII character in the buffer
     dec di                  ; Move the pointer to the next position
     test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
-    jnz convert_ascii_loop         ; If AX is not zero, continue
+    jnz res_convert_ascii_loop         ; If AX is not zero, continue
     
     ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
@@ -1033,28 +1199,6 @@ getDateTime proc
     call PrintString
     ret
 getDateTime endp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

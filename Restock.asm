@@ -10,7 +10,8 @@
     ; Define messages
     res_Header      db 13, 10, '+============================+'
                     db 13, 10, '         Restock Menu'
-                    db 13, 10, '+============================+$'
+                    db 13, 10, '+============================+'
+                    db 13, 10, 'MAX inventory level is 100 !! $'
     res_prompt_action db 0Dh, 0Ah, 'Enter A to add stock or R to reduce stock: $'
     res_prompt_amount db 0Dh, 0Ah, 'Enter the amount (1-99): $'
     res_invalid_action_msg db 0Dh, 0Ah, 'Invalid action, please try again.$'
