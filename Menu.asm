@@ -372,7 +372,7 @@ printHeader endp
 restock proc
     call clearScreen
 
-    lea dx, [restockMenu]
+    lea dx, restockMenu
     mov ah, 09h ; Print the restock menu
     int 21h ; Call DOS interrupt
 
@@ -380,136 +380,8 @@ restock proc
     mov ah, 09h ; Print the restock menu
     int 21h ; Call DOS interrupt
     
-    mov cx, 10 ; Set the loop counter to 10
-    mov si, 0 ; Set the index to 0
+    call itemList
 
-; Print the item list
-res_itemList:
-    mov bx,si
-    inc bx
-
-    cmp bx,9
-    jle res_singleDigit
-    mov dx,'1'
-    mov ah,02h
-    int 21h
-
-    mov bx,0
-
-; single digit
-res_singleDigit:
-
-    mov dx,bx
-    add dx,'0'
-    mov ah,02h
-    int 21h
-    
-    mov dx,2eh
-    mov ah,02h
-    int 21h
-
-    mov ax,si
-    mov bx,20
-    mul bx
-
-    lea dx,inv_name
-    add dx,ax
-    mov ah ,09h
-    int 21h
-
-    mov dx,9
-    mov ah,02h
-    int 21h
-
-    xor bx,bx
-    mov bx,2
-    xor ax,ax
-    mov ax,si
-    mul bx
-    
-    mov count,si
-
-    lea si,inv_quantity
-    add si,ax
-    xor ax,ax
-    mov ax,[si]
-    
-    lea di, buffer + 5      
-    mov byte ptr [di], '$'  
-    dec di                  
-
-    call Convertdb
-
-    ; Print the result
-    lea dx, [di+1]          ; DX points to the first character of the converted number
-    mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
-
-    mov dx,9
-    mov ah,02h
-    int 21h
-
-    xor bx,bx
-    mov bx,2
-    xor ax,ax
-    mov ax,count
-    mul bx
-
-    lea si,inv_price
-    add si,ax
-    xor ax,ax
-    mov ax,[si]
-    mov bx,100
-    div bx
-    mov temp,dx
-
-
-    lea di, buffer + 5      
-    mov byte ptr [di], '$'  
-    dec di                  
-
-    call Convertdb
-
-; Print the result
-    lea dx, [di+1]          ; DX points to the first character of the converted number
-    mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
-
-    mov dx,'.'
-    mov ah,02h
-    int 21h
-
-    xor ax,ax
-    mov ax,temp
-    lea di, buffer + 5      
-    mov byte ptr [di], '$'  
-    dec di  
-    
-    call Convertdb
-
-; Print the result
-    lea dx, [di+1]          ; DX points to the first character of the converted number
-    mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
-
-    xor dx,dx
-    xor ax,ax
-    ;new line
-    mov dx,13
-    mov ah,02h
-    int 21h
-    mov dx,10
-    int 21h
-
-    mov si,count
-    inc si
-    dec cx
-    cmp cx,0
-    je res_skip
-    jmp res_itemList
-
-
-res_skip:
     lea dx,res_enterChoice
     mov ah,09h
     int 21h
@@ -575,7 +447,7 @@ res_enterQty:
     int 21h
 
     ; Display updated quantity message
-    mov ax,tempResQty
+    ;mov ax,tempResQty
     lea di,buffer+5
     dec di
 
@@ -587,7 +459,7 @@ res_enterQty:
     mul bx
     add si,ax
     xor ax,ax
-    mov ax, [tempInvQty]
+    mov ax, [tempResQty]
     mov [si], ax
 
 
@@ -625,6 +497,10 @@ restock endp
 itemList proc
     mov cx,10
     mov si,0
+    lea dx,invHead
+    mov ah,09h
+    int 21h
+
 itemLists:
 
     mov bx,si
@@ -747,7 +623,7 @@ singleDigit:
     cmp cx,0
     je skip6
     jmp itemLists
-
+skip6:
     ret
 itemList endp
 
@@ -760,7 +636,6 @@ sellItem proc
     
     call itemList
 
-skip6:
 
     lea dx,enterChoice
     mov ah,09h
@@ -815,6 +690,7 @@ qtySkip:
     ;saving quantity into array
     xor ax,ax
     mov ax, [tempInvIndex]
+    xor bx,bx
     mov bx,2
     lea si,inv_quantity
     mul bx
