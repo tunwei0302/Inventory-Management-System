@@ -87,7 +87,7 @@
     enterChoice db 13,10,'Enter your choice > $'
     exitSellItem    db '11.Exit',13,10,'$'
     enterSellItem   db 13,10,'Enter Item No > $'
-    enterQuantity db 13,10,'Enter Sell Quantity > $'
+    enterQuantity db 13,10,'Enter Sell Quantity (1 - 99) > $'
     totalProfit db 13,10,'Total Profit > $'
     sellItem_jumpTable db ''
     tempInvQty DW ?
