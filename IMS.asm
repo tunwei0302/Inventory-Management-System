@@ -183,7 +183,7 @@ MAIN PROC
 
     invPage:
         CALL clearScreen
-        ;CALL displayInv
+        CALL displayInv
         CALL viewInv
         CALL invNavigate
         RET

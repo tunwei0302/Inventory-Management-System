@@ -88,7 +88,9 @@
 
     item_selected       db 13, 10, 'Item selected: $'
     prev_price          db 13, 10, 'Previous Price: $'
-    new_price           db 13, 10, 'New Price: $'
+    new_price           db 13, 10, 'New Price [00.01 - 99.99] [Enter R to Return]: $'
+    price_error         db 13, 10, 'Please Enter According to the Format [00.00]!!$'
+    price_range         db 13, 10, 'Please Enter Price between [00.01 - 99.99]$'
 
     prev_quantity       db 13, 10, 'Previous Quantity: $'
     new_quantity        db 13, 10, 'New Quantity: $'
@@ -108,6 +110,10 @@
                         db 20 
 
     buffer db 20 dup('$')
+    input_buffer db 10 dup('$')
+    amount db ?
+    temp_price dw ?
+
     input_error db 13, 10, 'Input Error ! Please Try Again !!$'
     press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
     new_line db 13, 10, '$'
@@ -187,7 +193,7 @@ loginPage proc
         je login
         cmp al, "n"
         je login
-        jne wrong_input1
+        jne wrong_input
 
     enter_name:
         mov dx, offset username_prompt   ; Prompt for username
@@ -226,10 +232,9 @@ loginPage proc
 
         jmp validate_login
 
-    wrong_input1:                         ; Print Input Error Msg for User to Know
-        mov ah, 09h 
+    wrong_input:                         ; Print Input Error Msg for User to Know 
         mov dx, offset input_error
-        int 21h 
+        call PrintString
         
         call double_new_line
         jmp exit_confirmation
@@ -578,7 +583,7 @@ edit_item_name_page proc
         je edit_name1
         cmp al, "n"
         je edit_name1
-        jne wrong_input2
+        jne wrong_input1
 
     edit_name2:
         ; Replace inv name with temp name
@@ -606,15 +611,13 @@ edit_item_name_page proc
             inc di                     
             loop fill_spaces           
 
-        
             mov al, '$'                ; Add dollar sign at the end
             mov [di], al 
             jmp return1                   
 
-    wrong_input2:
-        mov ah, 09h 
+    wrong_input1:
         mov dx, offset input_error
-        int 21h 
+        call printString 
         
         call double_new_line
         call system_pause
@@ -628,24 +631,121 @@ endp
 edit_item_price_page proc
     edit_price1:
         ;call selectItem
-        mov dx, offset item_selected
+        ; mov dx, offset item_selected
+        ; call PrintString
+
+        ; lea dx, inv_price
+        ; call PrintString
+
+        mov dx, offset new_price
         call PrintString
 
-        lea dx, inv_price
+        lea dx, input_buffer
+        mov ah, 0Ah
+        int 21h
+
+        cmp [input_buffer+0], 'R'
+        je return2
+        cmp [input_buffer+0], 'r'
+        je return2
+
+        mov dx, offset input_con
         call PrintString
 
-        mov dx, offset prev_price
-        call PrintString
+        mov ah, 01h
+        int 21H    
+        cmp al, "Y"
+        je edit_price2
+        cmp al, "y"
+        je edit_price2
+        cmp al, "N"
+        je edit_price1
+        cmp al, "n"
+        je edit_price1
+        jne wrong_input2
 
-        lea dx, inv_price 
-        call PrintString
+    edit_price2:
+        ; Replace inv name with temp name
+        lea si, input_buffer             ; Point to the new name (after length byte)
+        xor ax, ax 
+        xor bx, bx 
+        mov cx, 5
+        mov dx, 10 
 
-        lea dx, inv_price+2 
+        check_price1:
+            cmp cx, 3
+            je check_price2
+            cmp cx, 0
+            je check_price_range
+            mov bl, [si]
+            sub bl, '0'
+
+            cmp bl, 9
+            jg price_format_error
+            mul dx ; Multiply AX by 10
+            add ax, bx ; Add the digit to AX
+            inc si ; Move to the next character
+            loop check_price1
+
+        check_price2:
+            mov bl, [si]
+            cmp bl, '.'
+            jne price_format_error
+            mov cx, 2
+            inc si
+            jmp check_price1
+
+    return2:
+        ret
+
+    price_format_error:
+        mov dx, offset price_error
         call PrintString
+        
+        call double_new_line
+        call system_pause
+        jmp edit_price1
+
+    price_range_error:
+        mov dx, offset price_range
+        call PrintString
+        
+        call double_new_line
+        call system_pause
+        jmp edit_price1
+
+    check_price_range:
+        mov temp_price, ax
+        cmp ax, 1
+        jl price_range_error
+        cmp ax, 9999
+        jg price_range_error
+        ; call 
+        jmp return2
+
+    wrong_input2: 
+        mov dx, offset input_error
+        call PrintString
+        
+        call double_new_line
+        call system_pause
+        jmp edit_price1
 
 edit_item_price_page endp
 
 edit_item_quantity_page proc
+    edit_quantity1:
+        mov dx, offset prev_price
+        call PrintString
+
+        lea dx, input_buffer
+        mov ah, 0Ah ; Buffered input
+        int 21h
+
+        ; call string_to_number
+        ; mov amount, ax
+
+        overwrite_quantity:
 
 edit_item_quantity_page endp
 
@@ -756,7 +856,6 @@ getDateTime proc
     call PrintString
     ret
 getDateTime endp
-
 
 
 
