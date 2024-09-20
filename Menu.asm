@@ -443,11 +443,6 @@ singleDigit:
     add si,ax
     mov cx,[si]
 
-    ;check quantity
-    lea dx, [si]
-    mov ah, 09h
-    int 21h
-
     lea dx,enterQuantity
     mov ah,09h
     int 21h
@@ -472,6 +467,9 @@ singleDigit:
     lea dx, [si]
     mov ah, 09h
     int 21h
+
+    call double_new_line
+    CALL system_pause
 
 invalidQty:
     lea dx, invalidQty_msg
