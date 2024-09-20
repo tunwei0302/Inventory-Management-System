@@ -85,7 +85,7 @@
     tempInvQty DW ?
     tempInvIndex dw ?
     sellAmount dw ?
-    invHead db 'ID  NAME          QUANTITY   PRICE',13,10,'$'
+    invHead db 13,10,'ID  NAME          QUANTITY   PRICE',13,10,'$'
 
     prompt_selectNo     db 13, 10, 'Select Item No [1 - 10] [Enter R to Return]: $'
 
@@ -819,8 +819,6 @@ editMenu endp
 edit_item_name_page proc
     edit_name1:
         call clearScreen
-        mov ah,13
-        int 21h
         call itemList
         call get_name_offset
         mov dx, offset prev_name
