@@ -47,8 +47,8 @@
     ; Inventory 
     invSize             equ 200 ; SIZE OF STOCK
         inv_Id          DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
-        inv_name        DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
-             "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
+        inv_name        DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $", "SCISSORS           $"
+                        DB  "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
         inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 15, 1, 23 ;quantity
         inv_price       dw 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
 
@@ -89,7 +89,6 @@
     enterSellItem   db 13,10,'Enter Item No > $'
     enterQuantity db 13,10,'Enter Sell Quantity (1 - 99) > $'
     totalProfit db 13,10,'Total Profit > $'
-    sellItem_jumpTable db ''
     tempInvQty DW ?
     tempInvIndex dw ?
     sellAmount dw ?
