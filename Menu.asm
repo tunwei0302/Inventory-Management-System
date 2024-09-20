@@ -106,20 +106,19 @@
                         db 13, 10, '    Edit Items Menu'
                         db 13, 10, '+==========+==========+'
                         db 13, 10, '1. Edit Item Name'
-                        db 13, 10, '2. Edit Item Price'
-                        db 13, 10, '3. Edit Item Quantity'
-                        db 13, 10, '4. Return'
+                        db 13, 10, '2. Edit Item Quantity'
+                        db 13, 10, '3. Return'
                         db 13, 10, 'Enter your choice > $'
 
+    en_header           db 13, 10, '+==========+==========+'
+                        db 13, 10, '       Edit Name'
+                        db 13, 10, '+==========+==========+$'
     prev_name           db 13, 10, 'Item Previous Name: $'
     new_name            db 13, 10, 'Item New Name [Enter R to Return]: $'
 
-    item_selected       db 13, 10, 'Item selected: $'
-    prev_price          db 13, 10, 'Previous Price: $'
-    new_price           db 13, 10, 'New Price [00.01 - 99.99] [Enter R to Return]: $'
-    price_error         db 13, 10, 'Please Enter According to the Format [00.00]!!$'
-    price_range         db 13, 10, 'Please Enter Price between [00.01 - 99.99]$'
-
+    eq_header           db 13, 10, '+==========+==========+'
+                        db 13, 10, '       Edit Quantity'
+                        db 13, 10, '+==========+==========+$'
     prev_quantity       db 13, 10, 'Previous Quantity: $'
     new_quantity        db 13, 10, 'New Quantity [0-99] [Enter R to Return]: $'
     quantity_range      db 13, 10, 'Please Enter Quantity between [0 - 99]$'
@@ -150,7 +149,6 @@ main proc
     mov ds, ax
     
     start:
-        call printHeader
         call loginPage
         cmp al, 0
         je exit
@@ -166,9 +164,7 @@ main endp
 
 loginPage proc
     login:
-        ;call clearScreen
-        ;call MoveCursorAscii
-
+        call printHeader
         ; Clear username buffer
         lea di, input_username + 2       ; Point to the start of the input buffer
         mov cx, 20                       ; Set CX to the size of the buffer (20 bytes)
@@ -301,6 +297,7 @@ checkLogin proc
 checkLogin endp
 
 menu proc
+    menu1:
     call clearScreen
     lea dx,mainMenuOption
     mov ah,09h
@@ -321,6 +318,7 @@ skip2:
     cmp al,3
     jne skip3
     call editMenu
+    jmp menu1
 skip3:
     cmp al,4
     jne skip4
@@ -917,18 +915,13 @@ editMenu proc
     skip1_1:
         cmp al,2
         jne skip1_2
-        call edit_item_price_page
+        call edit_item_quantity_page
         jmp edit_start
     skip1_2:
         cmp al,3
         jne skip1_3
-        call edit_item_quantity_page
-        jmp edit_start
-    skip1_3:
-        cmp al,4
-        jne skip1_4
         ret
-    skip1_4:
+    skip1_3:
         mov dx, offset inputError
         mov ah,09h
         int 21h
@@ -941,6 +934,8 @@ editMenu endp
 edit_item_name_page proc
     edit_name1:
         call clearScreen
+        mov dx, offset en_header
+        call PrintString
         call itemList
         call get_name_offset
         cmp bl, 0
@@ -1021,11 +1016,6 @@ edit_item_name_page proc
 
 edit_item_name_page endp
 
-edit_item_price_page proc
-    
-
-edit_item_price_page endp
-
 edit_item_quantity_page proc
     
 
@@ -1086,59 +1076,6 @@ get_name_offset proc
         ret                              ; Return if 'R' or 'r' was detected
 
 get_name_offset endp
-
-get_price_offset proc
-    price_offset1:
-        mov dx, offset prompt_selectNo
-        call PrintString
-
-        ; Get input from the user
-        lea dx, buffer
-        mov ah, 0ah
-        int 21h
-
-        ; Check if input starts with 'R' or 'r' (special case)
-        cmp byte ptr [buffer+2], 'R'    ; Compare the first byte with 'R'
-        je return5                      ; If equal, jump to return5
-        cmp byte ptr [buffer+2], 'r'    ; Compare with 'r'
-        je return5                      ; If equal, jump to return5
-
-        ; Convert input from string to number
-        lea si, buffer+2
-        xor ax, ax                      ; Clear AX (input number)
-        xor bx, bx                      ; Clear BX (not used)
-        mov cx, 10                      ; Set base for number conversion (decimal)
-
-        call convert_loop                ; Call conversion routine (assuming it's correct)
-
-        ; Check if the number is within the valid range (1-10)
-        cmp ax, 1                        ; Is input < 1?
-        jl item_range_error2              ; Jump if less than 1 (invalid)
-        cmp ax, 10                       ; Is input > 10?
-        jg item_range_error2              ; Jump if greater than 10 (invalid)
-
-        ; Calculate the correct offset for the item name
-        sub ax, 1                        ; Convert to zero-based index (0 = first item)
-        mov bx, 2                       ; Each item is 20 bytes long
-        mul bx                              
-
-        lea di, inv_price
-        add di, ax
-        ret
-
-    item_range_error2:
-; Print error message for invalid input
-        mov dx, offset input_error
-        call PrintString
-
-        call double_new_line
-        call system_pause
-        jmp price_offset1                 ; Go back to the input prompt
-
-    return5:
-        mov bl, 0
-        ret                              ; Return if 'R' or 'r' was detected
-get_price_offset endp
 
 get_quantity_offset proc
     quantity_offset1:
