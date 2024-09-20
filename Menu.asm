@@ -50,7 +50,7 @@
         inv_name        DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
              "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
         inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
-        inv_price       dd 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
+        inv_price       dw 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
 
     ; Main Menu
     mainMenuOption      db 13,10,' Inventory Management System ',13,10
@@ -109,6 +109,7 @@
     invalidQty_msg db 13,10,'Not enough quantity to be sold! Please Try Again!'
     new_line db 13, 10, '$'
     count dw ?
+    temp dw ?
 .code
 main proc
 
@@ -422,6 +423,57 @@ singleDigit:
 
     call Convertdb
 
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    mov dx,9
+    mov ah,02h
+    int 21h
+
+    xor bx,bx
+    mov bx,2
+    xor ax,ax
+    mov ax,count
+    mul bx
+
+    lea si,inv_price
+    add si,ax
+    xor ax,ax
+    mov ax,[si]
+    mov bx,100
+    div bx
+    mov temp,dx
+
+
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di                  
+
+
+    call Convertdb
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    mov dx,'.'
+    mov ah,02h
+    int 21h
+
+    xor ax,ax
+    mov ax,temp
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di  
+    
+    call Convertdb
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
     xor dx,dx
     xor ax,ax
     ;new line
@@ -433,7 +485,12 @@ singleDigit:
 
     mov si,count
     inc si
-    loop itemlist
+    dec cx
+    cmp cx,0
+    je skip6
+    jmp itemList
+
+skip6:
 
     lea dx,enterChoice
     mov ah,09h
@@ -1142,10 +1199,7 @@ convert_loop1:
     test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
     jnz convert_loop1         ; If AX is not zero, continue
     
-    ; Print the result
-    lea dx, [di+1]          ; DX points to the first character of the converted number
-    mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
+    
     ret
 Convertdb endp
 
