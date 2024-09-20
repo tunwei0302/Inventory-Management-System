@@ -469,6 +469,7 @@ enterQty:
 
     ;display quantity
     mov ax,[si]
+    lea si, buffer + 4
 
     mov bx,10
 
@@ -476,12 +477,12 @@ convert_ascii_loop:
     xor dx,dx
     div bx
     add dl,'0' ;ASCII digit
-    mov [di], dl
-    dec di
+    mov [si], dl
+    dec si
     cmp ax,0
     jne convert_ascii_loop
 
-    lea dx, [di]
+    lea dx, [si]
     mov ah,09h
     int 21h
 
