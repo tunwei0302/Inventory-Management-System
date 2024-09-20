@@ -821,6 +821,9 @@ edit_item_name_page proc
         call clearScreen
         call itemList
         call get_name_offset
+        cmp bl, 0
+        je return1
+
         mov dx, offset prev_name
         call PrintString
 
@@ -898,15 +901,20 @@ endp
 
 edit_item_price_page proc
     edit_price1:
+        call clearScreen
         call itemList
         call get_price_quantity_offset
+        cmp bl, 0
+        je return2
+
         lea di, inv_price
         add di, ax
+
         ; mov dx, offset item_selected
         ; call PrintString
 
-        mov dx, offset prev_price
-        call PrintString
+    ;     mov dx, offset prev_price
+    ;     call PrintString
 
         mov dx, offset new_price
         call PrintString
@@ -914,6 +922,10 @@ edit_item_price_page proc
         lea dx, input_buffer
         mov ah, 0Ah
         int 21h
+
+        call double_new_line
+        lea dx, input_buffer+2
+        call PrintString
         
         cmp [input_buffer+2], 'R'
         je return2
@@ -934,6 +946,9 @@ edit_item_price_page proc
         cmp al, "n"
         je edit_price1
         jmp wrong_input2
+
+    return2:
+        ret
 
     edit_price2:
         lea si, input_buffer+2
@@ -979,9 +994,6 @@ edit_item_price_page proc
             loop check_price3
             jmp check_price_range
 
-    return2:
-        ret
-
     price_format_error:
         mov dx, offset price_error
         call PrintString
@@ -1004,6 +1016,7 @@ edit_item_price_page proc
         cmp ax, 9999
         jg price_range_error
 
+        call double_new_line
         ; mov [di], ax        ; Replace the first element (2000) with the value in AX
         lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
         mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
@@ -1025,16 +1038,30 @@ edit_item_price_page endp
 
 edit_item_quantity_page proc
     edit_quantity1:
+        call clearScreen
         call itemList
+        call get_price_quantity_offset
+        cmp bl, 0
+        je return3
+
+        ; lea di, inv_quantity
+        ; add di, ax
+
         ; mov dx, offset item_selected
         ; call PrintString
         
         ; call get_price_quantity_offset
         ; lea di, inv_quantity
         ; add di, ax
+        
 
-        mov dx, offset prev_quantity
-        call PrintString
+        ; mov dx, offset prev_quantity
+        ; call PrintString
+
+        ; lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
+        ; mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
+        ; dec di
+        ; call num_2_str     
 
         mov dx, offset new_quantity
         call PrintString
@@ -1107,7 +1134,7 @@ edit_item_quantity_page proc
         dec di
         call num_2_str     
         call system_pause  
-        jmp return2
+        jmp return3
 
     wrong_input3: 
         mov dx, offset input_error
@@ -1158,7 +1185,7 @@ get_name_offset proc
         lea di, inv_name                 ; Load the base address of inv_name
         add di, ax                       ; Add calculated offset to SI
         
-        jmp return4
+        ret
 
     item_range_error:
 ; Print error message for invalid input
@@ -1170,6 +1197,7 @@ get_name_offset proc
         jmp name_offset1                 ; Go back to the input prompt
 
     return4:
+        mov bl, 0
         ret                              ; Return if 'R' or 'r' was detected
 
 get_name_offset endp
@@ -1187,9 +1215,9 @@ get_price_quantity_offset proc
 
         ; Check if input starts with 'R' or 'r' (special case)
         cmp byte ptr [buffer+2], 'R'    ; Compare the first byte with 'R'
-        je return5                      ; If equal, jump to return4
+        je return5                      ; If equal, jump to return5
         cmp byte ptr [buffer+2], 'r'    ; Compare with 'r'
-        je return5                      ; If equal, jump to return4
+        je return5                      ; If equal, jump to return5
 
         ; Convert input from string to number
         lea si, buffer+2
@@ -1207,10 +1235,10 @@ get_price_quantity_offset proc
 
         ; Calculate the correct offset for the item name
         sub ax, 1                        ; Convert to zero-based index (0 = first item)
-        mov bx, 2                       ; Each item is 20 bytes long
+        mov bx, 20                       ; Each item is 20 bytes long
         mul bx                              
 
-        jmp return5
+        ret
 
     item_range_error2:
 ; Print error message for invalid input
@@ -1222,6 +1250,7 @@ get_price_quantity_offset proc
         jmp price_quantity_offset1                 ; Go back to the input prompt
 
     return5:
+        mov bl, 0
         ret                              ; Return if 'R' or 'r' was detected
 get_price_quantity_offset endp
 
