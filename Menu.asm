@@ -1149,10 +1149,6 @@ edit_item_quantity_page proc
         mov ah, 0Ah
         int 21h
 
-        call double_new_line
-        lea dx, input_buffer+2
-        call PrintString
-
         cmp [input_buffer+2], 'R'
         je return3
         cmp [input_buffer+2], 'r'
@@ -1454,7 +1450,7 @@ MoveCursorAscii proc
 MoveCursorAscii endp
 
 Convertdb proc
-convert_loop1:
+    convert_loop1:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
     mov bx, 10              ; Dividing by 10 to extract the least significant digit
     div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
