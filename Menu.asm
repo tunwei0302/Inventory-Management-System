@@ -704,12 +704,11 @@ enterQty:
     jl invalidQty
 
     sub tempInvQty, ax
-    mov [si], offset tempInvQty
 
     CALL double_new_line
 
     ;display quantity
-    mov ax,[si]
+    mov ax,tempInvQty
     lea di,buffer+5
     dec di
 
