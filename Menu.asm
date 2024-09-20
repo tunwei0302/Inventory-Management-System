@@ -388,70 +388,83 @@ restock proc
     int 21h ; Call DOS interrupt
     
     call itemList
-    mov ah,9
-    int 21h
-    lea dx,totalPrice
-    mov ah,09h
+
+    lea dx, totalPrice
+    mov ah, 09h
     int 21h
 
     call getTotalPrice
 
-    xor ax,ax
-    mov ax,totalIntPrice
+    xor ax, ax
+    mov ax, totalIntPrice
     call printPrice
-;
-    xor ax,ax
-    mov dx,2eh
-    mov ah,02h    
+
+    xor ax, ax
+    mov dx, 2eh
+    mov ah, 02h    
     int 21h
-;
-    mov ax,totalFloatPrice
+
+    mov ax, totalFloatPrice
     call printPrice
-    lea dx,res_enterChoice
-    mov ah,09h
+
+enterItemID:
+    lea dx, res_enterChoice
+    mov ah, 09h
     int 21h
 
-    lea dx,buffer
-    mov ah,0ah
+    lea dx, buffer
+    mov ah, 0ah
     int 21h
 
-    lea si,buffer+2
-    xor ax,ax
-    mov cx,10
-    xor bx,bx
-
-    CALL convert_loop
-
-    sub ax,1
-    mov tempInvIndex,ax
-
-    mov bx,2
-    lea si,inv_quantity
-    mul bx
-    add si,ax
-    mov cx,[si]
-    mov tempResQty, cx
-
-; Enter Quantity to restock
-res_enterQty:
-    lea dx,res_enterQuantity
-    mov ah,09h
-    int 21h
-
-    ; Read the input string
-    lea dx,buffer
-    mov ah,0ah
-    int 21h
-
-    ; Convert the input string to a number
-    lea si,buffer+2
-    xor ax,ax
-    xor bx,bx
+    lea si, buffer+2
+    xor ax, ax
+    xor bx, bx
     mov cx, 10
 
     CALL convert_loop
 
-    ; Validate the number (max stock level is 9)
+    ; Validate the item ID (must be between 1 and 10)
+    cmp ax, 1
+    jl invalid_item_id
+    cmp ax, 10
+    jg invalid_item_id
+    jmp valid_item_id
+
+invalid_item_id:
+    lea dx, input_error
+    mov ah, 09h
+    int 21h
+    jmp enterItemID
+
+valid_item_id:
+    ; If valid, proceed with restocking
+    sub ax, 1
+    mov tempInvIndex, ax
+    mov bx, 2
+    lea si, inv_quantity
+    mul bx
+    add si, ax
+    mov cx, [si]
+    mov tempResQty, cx
+
+    ; Enter the quantity to restock
+res_enterQty:
+    lea dx, res_enterQuantity
+    mov ah, 09h
+    int 21h
+
+    lea dx, buffer
+    mov ah, 0ah
+    int 21h
+
+    lea si, buffer+2
+    xor ax, ax
+    xor bx, bx
+    mov cx, 10
+
+    CALL convert_loop
+
+    ; Validate the number (max stock level is 99)
     cmp ax, 1
     jl res_invalid_amount
     cmp ax, 99
@@ -460,10 +473,26 @@ res_enterQty:
     ; Change from subtracting to adding the quantity
     add tempResQty, ax
 
+    ; Check if the updated stock exceeds max_stock
+    mov bx, res_max_stock
+    cmp tempResQty, bx
+    jg res_exceed_max_stock
+
     CALL double_new_line
 
     ; Display current stock message
     lea dx, res_msg_current_stock
+    mov ah, 09h
+    int 21h
+
+    ; Calculate the offset for the item name
+    mov ax, tempInvIndex
+    mov bx, 20 ; Assuming each name is 20 bytes long
+    mul bx
+    add ax, offset inv_name
+    mov dx, ax
+
+    ; Display the item name
     mov ah, 09h
     int 21h
 
@@ -472,37 +501,26 @@ res_enterQty:
     mov ah, 09h
     int 21h
 
-    ; Display updated quantity message
-    ;mov ax,tempResQty
-    lea di,buffer+5
+    ; Display updated quantity
+    mov ax, tempResQty
+    lea di, buffer + 5
+    mov byte ptr [di], '$'
     dec di
+    call Convertdb
 
-    ;saving quantity into array
-    xor ax,ax
-    mov ax, [tempInvIndex]
-    mov bx,2
-    lea si,inv_quantity
-    mul bx
-    add si,ax
-    xor ax,ax
-    mov ax, [tempResQty]
-    mov [si], ax
-
-
-res_convert_ascii_loop:
-    xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
-    mov bx, 10              ; Dividing by 10 to extract the least significant digit
-    div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
-    add dl, '0'             ; Convert the remainder to ASCII by adding '0' (48)
-    mov [di], dl            ; Store the ASCII character in the buffer
-    dec di                  ; Move the pointer to the next position
-    test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
-    jnz res_convert_ascii_loop  ; If AX is not zero, continue
-    
     ; Print the result
-    lea dx, [di+1]          ; DX points to the first character of the converted number
-    mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
+    lea dx, [di+1]
+    mov ah, 09h
+    int 21h
+
+    ; Save the updated quantity into the array
+    mov ax, tempInvIndex
+    mov bx, 2
+    lea si, inv_quantity
+    mul bx
+    add si, ax
+    mov ax, tempResQty
+    mov [si], ax
 
     call double_new_line
     CALL system_pause
@@ -514,6 +532,12 @@ res_convert_ascii_loop:
 
 res_invalid_amount:
     lea dx, res_invalid_amount_msg
+    mov ah, 09h
+    int 21h
+    jmp res_enterQty
+
+res_exceed_max_stock:
+    lea dx, res_exceed_max_stock_msg
     mov ah, 09h
     int 21h
     jmp res_enterQty
@@ -662,41 +686,6 @@ itemList endp
 sellItem proc
     call clearScreen        ;Clear Screen
 
-    lea dx,[sellItemMenu]   ;Display Menu
-    mov ah,09h
-    int 21h
-
-    lea dx,[sellItemMenuOption] ;Display Options
-    mov ah,09h
-    int 21h
-
-    lea dx, [enterChoice]   ;Display Enter Choice
-    mov ah,09h
-    int 21h
-
-    mov ah,01h              ;Input
-    int 21h
-
-    ;convert into numeric value
-    sub al,'0'
-    cmp al, 1       ;get options
-    je end_switch_sell  ;end of switch case
-    cmp al, 2
-    JE SELL_EQUAL
-    JNE SELL_NOT_EQUAL  ;not equal then invalid
-
-SELL_EQUAL:
-    jmp menu
-
-SELL_NOT_EQUAL:
-    lea dx, [input_error]
-    mov ah,09h
-    int 21h
-
-    CALL double_new_line
-    CALL system_pause
-    jmp sellItem
-
 end_switch_sell:
     call ClearScreen
     lea dx,[sellItemMenu]
@@ -755,7 +744,7 @@ SELL2_EQUAL:
     int 21h
     CALL double_new_line
     CALL system_pause
-    jmp sellItem
+    jmp menu
 
 SELL2_NOT_EQUAL:
     cmp ax, 0 ;find if is digit 
