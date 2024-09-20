@@ -75,6 +75,7 @@
     res_msg_colon db ': ', 0, '$'
     tempResQty DW ? 
     res_exceed_max_stock_msg db 'Exceeds max stock. Please enter a valid amount.', 13, 10, '$'
+    res_invalid_item_id_msg db 'Invalid item ID. Please enter an ID between 1 and 10.', 13, 10, '$'
     res_max_stock dw 100
 
 
@@ -382,6 +383,7 @@ restock proc
     mov cx, 10 ; Set the loop counter to 10
     mov si, 0 ; Set the index to 0
 
+; Print the item list
 res_itemList:
     mov bx,si
     inc bx
@@ -394,6 +396,7 @@ res_itemList:
 
     mov bx,0
 
+; single digit
 res_singleDigit:
 
     mov dx,bx
@@ -483,6 +486,7 @@ res_singleDigit:
     dec di  
     
     call Convertdb
+
 ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
     mov ah, 09h             ; DOS interrupt to print the string
@@ -575,6 +579,17 @@ res_enterQty:
     lea di,buffer+5
     dec di
 
+    ;saving quantity into array
+    xor ax,ax
+    mov ax, [tempInvIndex]
+    mov bx,2
+    lea si,inv_quantity
+    mul bx
+    add si,ax
+    xor ax,ax
+    mov ax, [tempInvQty]
+    mov [si], ax
+
 
 res_convert_ascii_loop:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
@@ -604,13 +619,6 @@ res_invalid_amount:
     mov ah, 09h
     int 21h
     jmp res_enterQty
-
-res_invalidQty:
-    lea dx, res_invalid_amount_msg
-    mov ah, 09H 
-    int 21h
-
-    ret
 
 restock endp
 
