@@ -67,12 +67,15 @@
     restockMenu         db 13, 10, '+============================+'
                         db 13, 10, '         RESTOCK MENU'
                         db 13, 10, '+============================+',13,10,'$'
+    res_table_heading db 13, 10, 'Name                  Quantity    Price', 13, 10, '-----------------------------------------', 13, 10, '$'
     res_enterChoice     db 13,10,'Enter your choice of item to restock > $'
-    res_enterQuantity        db 13,10,'Enter Quantity to restock > $'
-    res_invalid_amount_msg   db 13,10,'Invalid amount, please enter a value between 1 and 9.$'
-    res_msg_current_stock db 'Current Stock for ', 0
-    res_msg_colon db ': ', 0
-    tempResQty DW ?
+    res_enterQuantity        db 13,10,'Enter Quantity to restock (1 - 99) > $'
+    res_invalid_amount_msg   db 13,10,'Invalid amount, please enter a value between 1 and 99.$'
+    res_msg_current_stock db 'Current Stock for ', 0, '$'
+    res_msg_colon db ': ', 0, '$'
+    tempResQty DW ? 
+    res_exceed_max_stock_msg db 'Exceeds max stock. Please enter a valid amount.', 13, 10, '$'
+    res_max_stock dw 100
 
 
     sellItemMenu        db 13,10,'==========================='
@@ -370,12 +373,15 @@ restock proc
     lea dx, [restockMenu]
     mov ah, 09h ; Print the restock menu
     int 21h ; Call DOS interrupt
+
+    lea dx, res_table_heading
+    mov ah, 09h ; Print the restock menu
+    int 21h ; Call DOS interrupt
     
     mov cx, 10 ; Set the loop counter to 10
     mov si, 0 ; Set the index to 0
 
 res_itemList:
-
     mov bx,si
     inc bx
 
@@ -458,8 +464,8 @@ res_singleDigit:
     mov byte ptr [di], '$'  
     dec di                  
 
-
     call Convertdb
+
 ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
     mov ah, 09h             ; DOS interrupt to print the string
@@ -523,15 +529,18 @@ res_skip:
     mov cx,[si]
     mov tempResQty, cx
 
+; Enter Quantity to restock
 res_enterQty:
     lea dx,res_enterQuantity
     mov ah,09h
     int 21h
 
+    ; Read the input string
     lea dx,buffer
     mov ah,0ah
     int 21h
 
+    ; Convert the input string to a number
     lea si,buffer+2
     xor ax,ax
     xor bx,bx
@@ -539,17 +548,31 @@ res_enterQty:
 
     CALL convert_loop
 
+    ; Validate the number (max stock level is 9)
+    cmp ax, 1
+    jl res_invalid_amount
+    cmp ax, 99
+    jg res_invalid_amount
+
     ; Change from subtracting to adding the quantity
     add tempResQty, ax
 
     CALL double_new_line
 
+    ; Display current stock message
+    lea dx, res_msg_current_stock
+    mov ah, 09h
+    int 21h
+
+    ; Display colon message
+    lea dx, res_msg_colon
+    mov ah, 09h
+    int 21h
 
     ; Display updated quantity message
     mov ax,tempResQty
     lea di,buffer+5
     dec di
-
 
 
 res_convert_ascii_loop:
@@ -570,11 +593,16 @@ res_convert_ascii_loop:
     call double_new_line
     CALL system_pause
 
-
     ; Return to main menu
     call menu
 
     ret
+
+res_invalid_amount:
+    lea dx, res_invalid_amount_msg
+    mov ah, 09h
+    int 21h
+    jmp res_enterQty
 
 res_invalidQty:
     lea dx, res_invalid_amount_msg
@@ -769,6 +797,17 @@ qtySkip:
 
     sub tempInvQty, ax
     mov sellAmount,ax
+    
+    ;saving quantity into array
+    xor ax,ax
+    mov ax, [tempInvIndex]
+    mov bx,2
+    lea si,inv_quantity
+    mul bx
+    add si,ax
+    xor ax,ax
+    mov ax, [tempInvQty]
+    mov [si], ax
 
     ;print total profit
     xor ax,ax
@@ -795,7 +834,7 @@ qtySkip:
     mov bx,100
     div bx
 
-
+    
     lea di, buffer + 5      
     mov byte ptr [di], '$'  
     dec di                  
@@ -824,7 +863,6 @@ qtySkip:
     int 21h                 ; Call DOS interrupt
 
     CALL double_new_line
-
 
     ;display quantity
     mov ax,tempInvQty
