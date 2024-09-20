@@ -19,7 +19,6 @@
     currentDayOfWeek db 'Day: $'
     daysOfWeek db 'Sunday   $', 'Monday   $', 'Tuesday  $', 'Wednesday$', 'Thursday $', 'Friday   $', 'Saturday $'
     lineCount db 0
-    ascii_Buffer db 26 dup(1)
 
     ; Login
     username        db "admin$", 0 
@@ -69,6 +68,7 @@
                         db 13,10,'        SELLING MENU'
                         db 13,10,'===========================',13,10,'$'
     enterChoice db 13,10,'Enter your choice > $'
+    enterQuantity db 13,10,'Enter Quantity > $'
     sellItem_jumpTable db ''
 
     ; Edit Item
@@ -116,6 +116,7 @@
 
     input_error db 13, 10, 'Input Error ! Please Try Again !!$'
     press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
+    invalidQty_msg db 13,10,'Not enough quantity to be sold! Please Try Again!'
     new_line db 13, 10, '$'
 .code
 main proc
@@ -419,7 +420,6 @@ singleDigit:
     inc si
     loop itemlist
 
-
     lea dx,enterChoice
     mov ah,09h
     int 21h
@@ -427,7 +427,6 @@ singleDigit:
     lea dx,buffer
     mov ah,0ah
     int 21h
-
 
     lea si,buffer+2
     xor ax,ax
@@ -449,52 +448,81 @@ convert_loop:
     lea si,inv_quantity
     mul bx
     add si,ax
-    mov dx,[si]
-    
+    mov cx,[si]
 
+    lea dx, [si]
+    mov ah, 09h
+    int 21h
 
+    lea dx,enterQuantity
+    mov ah,09h
+    int 21h
+
+    lea dx,buffer
+    mov ah,0ah
+    int 21h
+
+    lea si,buffer+2
+    xor ax,ax
+    xor bx,bx
+
+    CALL convert_loop
+
+    cmp cx,ax
+    jl invalidQty
+
+    sub cx, ax
+    mov [si], cx
+
+    lea dx, [si]
+    mov ah, 09h
+    int 21h
+
+invalidQty:
+    lea dx, invalidQty_msg
+    mov ah, 09H
+    int 21h
 
     ;xor bx,bx
     ;mov bx,20 
     ;mul bx
-;
+
     ;lea si,inv_name
     ;add si,AX
 
 
 
 
-    ;lea si,inv_name
-    ;add si,ax 
-    ;lea dx,[si] 
+    ; lea si,inv_name
+    ; add si,ax 
+    ; lea dx,[si] 
 
-    ;mov  ah,09h 
-    ;int 21h
+    ; mov  ah,09h 
+    ; int 21h
 
 
 
 
     
-    ;sub al,'0'
-    ;dec al
-;
-    ;mov dx,ax
-;
-    ;mov ah,02h
-    ;int 21h
-    ;xor ah,ah
-    ;xor bx,bx
-    ;mov bl,20
-    ;mul bl
-;
-;
-;
-    ;lea si,inv_name
-    ;add si,ax
-    ;
-    ;lea dx,[si]
-    ;mov ah,09h
-    ;int 21h
+    ; sub al,'0'
+    ; dec al
+
+    ; mov dx,ax;
+    ; mov ah,02h
+    ; int 21h
+    ; xor ah,ah
+    ; xor bx,bx
+    ; mov bl,20
+    ; mul bl
+
+
+
+    ; lea si,inv_name
+    ; add si,ax
+    
+    ; lea dx,[si]
+    ; mov ah,09h
+    ; int 21h
 
     ret
 sellItem endp
