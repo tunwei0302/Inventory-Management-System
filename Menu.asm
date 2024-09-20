@@ -49,7 +49,7 @@
         inv_Id          DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
         inv_name        DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
              "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
-        inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
+        inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 15, 1, 23 ;quantity
         inv_price       dw 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
 
     ; Main Menu
@@ -79,8 +79,11 @@
                         db 13,10,'===========================',13,10,'$'
     enterChoice db 13,10,'Enter your choice > $'
     enterQuantity db 13,10,'Enter Quantity > $'
+    totalProfit db 13,10,'Total Profit > $'
     sellItem_jumpTable db ''
     tempInvQty DW ?
+    tempInvIndex dw ?
+    sellAmount dw ?
 
     ; Edit Item
     edit_menu           db 13, 10, '+==========+==========+'
@@ -732,7 +735,7 @@ skip6:
     CALL convert_loop
 
     sub ax,1
-
+    mov tempInvIndex,ax
     mov bx,2
     lea si,inv_quantity
     mul bx
@@ -758,11 +761,69 @@ enterQty:
     CALL convert_loop
 
     cmp tempInvQty,ax
-    jl invalidQty
+    jge qtySkip
+    jmp invalidQty
+
+qtySkip:
 
     sub tempInvQty, ax
+    mov sellAmount,ax
+
+    ;print total profit
+    xor ax,ax
+    lea dx,totalProfit
+    mov ah,09h
+    int 21h
+
+    xor bx,bx
+    mov bx,2
+    xor ax,ax
+    mov ax,tempInvIndex
+    mul bx
+
+    lea si,inv_price
+    add si,ax
+
+    xor ax,ax
+    mov ax,sellAmount
+    xor bx,bx
+    mov bx,[si]
+    mul bx
+
+    xor bx,bx
+    mov bx,100
+    div bx
+
+
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di                  
+
+
+    call Convertdb
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    mov dx,'.'
+    mov ah,02h
+    int 21h
+
+    xor ax,ax
+    mov ax,temp
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di  
+    
+    call Convertdb
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
 
     CALL double_new_line
+
 
     ;display quantity
     mov ax,tempInvQty
