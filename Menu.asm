@@ -375,10 +375,6 @@ restock proc
     lea dx, restockMenu
     mov ah, 09h ; Print the restock menu
     int 21h ; Call DOS interrupt
-
-    lea dx, res_table_heading
-    mov ah, 09h ; Print the restock menu
-    int 21h ; Call DOS interrupt
     
     call itemList
 
@@ -498,6 +494,7 @@ itemList proc
     mov cx,10
     mov si,0
     lea dx,invHead
+    lea dx, res_table_heading
     mov ah,09h
     int 21h
 
