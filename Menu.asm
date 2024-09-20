@@ -585,17 +585,10 @@ res_invalidQty:
 
 restock endp
 
-
-sellItem proc
-    call clearScreen
-
-    lea dx,[sellItemMenu]
-    mov ah,09h
-    int 21h
-    
+itemList proc
     mov cx,10
     mov si,0
-itemList:
+itemLists:
 
     mov bx,si
     inc bx
@@ -716,7 +709,19 @@ singleDigit:
     dec cx
     cmp cx,0
     je skip6
-    jmp itemList
+    jmp itemLists
+
+    ret
+itemList endp
+
+sellItem proc
+    call clearScreen
+
+    lea dx,[sellItemMenu]
+    mov ah,09h
+    int 21h
+    
+    call itemList
 
 skip6:
 
