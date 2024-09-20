@@ -1011,17 +1011,18 @@ edit_item_price_page proc
         jmp edit_price1
 
     check_price_range:
-        cmp ax, 20
-        jl price_range_error
-        cmp ax, 9999
-        jg price_range_error
+        ; cmp ax, 20
+        ; jl price_range_error
+        ; cmp ax, 9999
+        ; jg price_range_error
 
-        call double_new_line
-        ; mov [di], ax        ; Replace the first element (2000) with the value in AX
-        lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
-        mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
-        dec di
-        call num_2_str     
+        ; call double_new_line
+        mov ax, 2000
+        mov [di], ax        ; Replace the first element (2000) with the value in AX
+        ; lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
+        ; mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
+        ; dec di
+        ; call num_2_str     
         
         call system_pause
         jmp return2
@@ -1040,11 +1041,11 @@ edit_item_quantity_page proc
     edit_quantity1:
         call clearScreen
         call itemList
-        call get_price_quantity_offset
+        ; call get_price_quantity_offset
         cmp bl, 0
         je return3
 
-        ; lea di, inv_quantity
+        lea di, inv_quantity
         ; add di, ax
 
         ; mov dx, offset item_selected
@@ -1092,7 +1093,7 @@ edit_item_quantity_page proc
 
     edit_quantity2:
         lea si, input_buffer+2
-        mov cl, [input_buffer+1]
+        mov cx, 2
         xor ax, ax 
         xor bx, bx 
         mov dx, 10 
@@ -1119,21 +1120,16 @@ edit_item_quantity_page proc
         jmp edit_quantity1
 
     check_quantity_range:
-        cmp ax, 0
-        jl quantity_range_error
-        cmp ax, 99
-        jg quantity_range_error
+        ; cmp ax, 0
+        ; jl quantity_range_error
+        ; cmp ax, 99
+        ; jg quantity_range_error
 
         mov ah, 09h             ; DOS interrupt to display string
         lea dx, new_line         ; Point to the new line string
         int 21h 
 
-        ; mov [di], ax
-        lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
-        mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
-        dec di
-        call num_2_str     
-        call system_pause  
+        mov [di], ax 
         jmp return3
 
     wrong_input3: 
