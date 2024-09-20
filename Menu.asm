@@ -57,7 +57,7 @@
                         db '+=============================+',13,10
                         db '1. Restock',13,10
                         db '2. Sell item',13,10
-                        db '3. Edit item',13,10
+                        db '3. Edit item Name',13,10
                         db '4. Calculate Total',13,10
                         db '5. Logout', 13, 10
                         db 'Enter your choice > $'
@@ -101,26 +101,12 @@
     inv_quantityBuffer dw 2
     priceBuffer db 6 dup(?)
 
-    ; Edit Item
-    edit_menu           db 13, 10, '+==========+==========+'
-                        db 13, 10, '    Edit Items Menu'
-                        db 13, 10, '+==========+==========+'
-                        db 13, 10, '1. Edit Item Name'
-                        db 13, 10, '2. Edit Item Quantity'
-                        db 13, 10, '3. Return'
-                        db 13, 10, 'Enter your choice > $'
-
+    ; Edit Item Name
     en_header           db 13, 10, '+==========+==========+'
                         db 13, 10, '       Edit Name'
                         db 13, 10, '+==========+==========+$'
     prev_name           db 13, 10, 'Item Previous Name: $'
     new_name            db 13, 10, 'Item New Name [Enter R to Return]: $'
-
-    eq_header           db 13, 10, '+==========+==========+'
-                        db 13, 10, '       Edit Quantity'
-                        db 13, 10, '+==========+==========+$'
-    new_quantity        db 13, 10, 'New Quantity [0-99] [Enter R to Return]: $'
-    quantity_range      db 13, 10, 'Please Enter Quantity between [0 - 99]$'
 
     input_con           db 13, 10, 'Confirm Action [Y=yes : N=No]: $'
 
@@ -313,7 +299,7 @@ skip1:
 skip2:
     cmp al,3
     jne skip3
-    call editMenu
+    call edit_item_name
     jmp menu1
 skip3:
     cmp al,4
@@ -894,40 +880,7 @@ invalidQty:
 
 sellItem endp
 
-editMenu proc
-    edit_start:
-        call clearScreen
-        mov dx, offset edit_menu
-        call PrintString
-        
-        mov ah,01h
-        int 21h
-
-        sub al,'0'
-        cmp al,1
-        jne skip1_1
-        call edit_item_name_page
-        jmp edit_start
-    skip1_1:
-        cmp al,2
-        jne skip1_2
-        call edit_item_quantity_page
-        jmp edit_start
-    skip1_2:
-        cmp al,3
-        jne skip1_3
-        ret
-    skip1_3:
-        mov dx, offset inputError
-        mov ah,09h
-        int 21h
-
-        call double_new_line
-        call system_pause
-        jmp edit_start
-editMenu endp
-
-edit_item_name_page proc
+edit_item_name proc
     edit_name1:
         call clearScreen
         mov dx, offset en_header
@@ -1010,55 +963,7 @@ edit_item_name_page proc
     return1:
         ret
 
-edit_item_name_page endp
-
-edit_item_quantity_page proc
-    edit_quantity1:
-        call clearScreen
-        call itemList
-        call get_quantity_offset
-        cmp bl, 0
-        je return3
-
-        mov dx, offset new_quantity
-        call PrintString
-
-        lea dx, input_buffer
-        mov ah, 0Ah
-        int 21h
-
-        cmp [input_buffer+2], 'R'
-        je return3
-        cmp [input_buffer+2], 'r'
-        je return3
-
-        mov dx, offset input_con
-        call PrintString
-
-        mov ah, 01h
-        int 21H    
-        cmp al, "Y"
-        je edit_quantity2
-        cmp al, "y"
-        je edit_quantity2
-        cmp al, "N"
-        je edit_quantity1
-        cmp al, "n"
-        je edit_quantity1
-        jne wrong_input3
-        
-    edit_quantity2:
-
-
-    wrong_input3: 
-        mov dx, offset input_error
-        call PrintString
-        
-        call double_new_line
-        call system_pause
-        jmp edit_quantity1
-
-edit_item_quantity_page endp
+edit_item_name endp
 
 get_name_offset proc
     name_offset1:
@@ -1073,9 +978,9 @@ get_name_offset proc
 
         ; Check if input starts with 'R' or 'r' 
         cmp byte ptr [buffer+2], 'R'    
-        je return4                      
+        je return2                     
         cmp byte ptr [buffer+2], 'r'    
-        je return4                      
+        je return2                     
 
         ; Convert input from string to number
         lea si, buffer+2
@@ -1110,63 +1015,11 @@ get_name_offset proc
         call system_pause
         jmp name_offset1                 
 
-    return4:
+    return2:
         mov bl, 0
         ret                              ; Return if 'R' or 'r' was detected
 
 get_name_offset endp
-
-get_quantity_offset proc
-    quantity_offset1:
-        mov dx, offset prompt_selectNo
-        call PrintString
-
-        ; Get input from the user
-        lea dx, buffer
-        mov ah, 0ah
-        int 21h
-
-        ; Check if input starts with 'R' or 'r' 
-        cmp byte ptr [buffer+2], 'R'    
-        je return8                      
-        cmp byte ptr [buffer+2], 'r'    
-        je return8                      
-
-        ; Convert input from string to number
-        lea si, buffer+2
-        xor ax, ax                      ; Clear AX (input number)
-        xor bx, bx                      ; Clear BX (not used)
-        mov cx, 10                      
-
-        call convert_loop               ; Call conversion routine (assuming it's correct)
-
-        ; Check if the number is within the valid range (1-10)
-        cmp ax, 1                        
-        jl item_range_error3             
-        cmp ax, 10                       
-        jg item_range_error3              
-
-        ; Calculate the correct offset for the item name
-        sub ax, 1                        ; 0 = first item
-        mov bx, 2                        ; Each item is 20 bytes long
-        mul bx                              
-
-        lea di, inv_quantity
-        add di, ax
-        ret
-
-    item_range_error3:
-    ; Print error message for invalid input
-        mov dx, offset input_error
-        call PrintString
-
-        call double_new_line
-        call system_pause
-        jmp quantity_offset1                 
-    return8:
-        mov bl, 0
-        ret                              ; Return if 'R' or 'r' was detected
-get_quantity_offset endp
 
 calculateTotal proc
 
