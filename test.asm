@@ -855,7 +855,7 @@ edit_item_name_page proc
         je edit_name1
         cmp al, "n"
         je edit_name1
-        jne wrong_input1
+        jmp wrong_input1
 
     edit_name2:
         ; Replace inv name with temp name
@@ -973,6 +973,7 @@ edit_item_price_page proc
             loop check_price1
 
         check_price2:
+            xor bx,bx
             mov bl, [si]
             cmp bl, '.'
             jne price_format_error
@@ -1011,14 +1012,23 @@ edit_item_price_page proc
         jmp edit_price1
 
     check_price_range:
-        ; cmp ax, 20
-        ; jl price_range_error
-        ; cmp ax, 9999
-        ; jg price_range_error
+        ;cmp ax, 20
+        ;jl price_range_error
+        ;cmp ax, 9999
+        ;jg price_range_error
 
         ; call double_new_line
-        mov ax, 2000
-        mov [di], ax        ; Replace the first element (2000) with the value in AX
+        ;lea si,inv_price
+        ;add si,temp
+        call Convertdb
+    
+        lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    mov ah,0ah
+    int 21h
+        ;mov word ptr[si], ax        ; Replace the first element (2000) with the value in AX
         ; lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
         ; mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
         ; dec di
@@ -1228,9 +1238,9 @@ get_price_offset proc
         sub ax, 1                        ; Convert to zero-based index (0 = first item)
         mov bx, 2                       ; Each item is 20 bytes long
         mul bx                              
-
-        lea di, inv_price
-        add di, ax
+        mov temp,ax
+        lea si, inv_price
+        add si, ax
         ret
 
     item_range_error2:
