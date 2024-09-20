@@ -11,12 +11,23 @@ main:
     mov ds, ax
 
     ; Convert the number to an ASCII string
-    mov ax, number+2          ; Load the number into AX
+    mov ax, 200          ; Load the number into AX
     lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
     mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
     dec di                  ; Move DI to point to the first free spot
+    call num_2_str
 
-ConvertLoop:
+
+
+    ; Exit program
+    mov ah, 4Ch             ; DOS function to terminate the program
+    int 21h                 ; Call DOS interrupt
+
+
+
+
+num_2_str proc
+    ConvertLoop:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
     mov bx, 10              ; Dividing by 10 to extract the least significant digit
     div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
@@ -35,9 +46,5 @@ ConvertLoop:
     mov ah, 09h             ; DOS interrupt to display string
     lea dx, newline         ; Point to the new line string
     int 21h                 ; Call DOS interrupt
-
-    ; Exit program
-    mov ah, 4Ch             ; DOS function to terminate the program
-    int 21h                 ; Call DOS interrupt
-
+num_2_str endp
 end main
