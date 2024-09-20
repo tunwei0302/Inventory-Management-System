@@ -62,11 +62,16 @@
                         db '5. Logout', 13, 10
                         db 'Enter your choice > $'
     inputError          db 13,10,'Input Invalid! Please try again later.',13,10,'$'
+
+    ; ------------------------------- Restock -------------------------------
     restockMenu         db 13, 10, '+============================+'
                         db 13, 10, '         RESTOCK MENU'
                         db 13, 10, '+============================+',13,10,'$'
     res_enterChoice     db 13,10,'Enter your choice of item to restock > $'
     res_enterQuantity        db 13,10,'Enter Quantity to restock > $'
+    res_invalid_amount_msg   db 13,10,'Invalid amount, please enter a value between 1 and 9.$'
+    res_msg_current_stock db 'Current Stock for ', 0
+    res_msg_colon db ': ', 0
 
     sellItemMenu        db 13,10,'==========================='
                         db 13,10,'        SELLING MENU'
@@ -374,11 +379,6 @@ res_itemList:
     mov ah,02h
     int 21h
 
-    ;mov si,0
-    ;mov dx,si
-    ;add dx,'0'
-    ;mov ah,02h
-    ;int 21h
     mov bx,0
 
 res_singleDigit:
@@ -424,6 +424,57 @@ res_singleDigit:
 
     call Convertdb
 
+    ; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    mov dx,9
+    mov ah,02h
+    int 21h
+
+    xor bx,bx
+    mov bx,2
+    xor ax,ax
+    mov ax,count
+    mul bx
+
+    lea si,inv_price
+    add si,ax
+    xor ax,ax
+    mov ax,[si]
+    mov bx,100
+    div bx
+    mov temp,dx
+
+
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di                  
+
+
+    call Convertdb
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
+    mov dx,'.'
+    mov ah,02h
+    int 21h
+
+    xor ax,ax
+    mov ax,temp
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di  
+    
+    call Convertdb
+; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+
     xor dx,dx
     xor ax,ax
     ;new line
@@ -435,8 +486,13 @@ res_singleDigit:
 
     mov si,count
     inc si
-    loop res_itemlist
+    dec cx
+    cmp cx,0
+    je res_skip
+    jmp res_itemList
 
+
+res_skip:
     lea dx,res_enterChoice
     mov ah,09h
     int 21h
@@ -475,18 +531,19 @@ res_enterQty:
 
     CALL convert_loop
 
-    cmp cx,ax
-    jl res_invalidQty
-
-    sub cx, ax
+    ; Change from subtracting to adding the quantity
+    add cx, ax
     mov [si], cx
 
     CALL double_new_line
 
-    ;display quantity
+
+    ; Display updated quantity message
     mov ax,[si]
     lea di,buffer+5
     dec di
+
+
 
 convert_ascii_loop:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
@@ -496,7 +553,7 @@ convert_ascii_loop:
     mov [di], dl            ; Store the ASCII character in the buffer
     dec di                  ; Move the pointer to the next position
     test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
-    jnz convert_ascii_loop         ; If AX is not zero, continue
+    jnz convert_ascii_loop  ; If AX is not zero, continue
     
     ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
@@ -506,15 +563,19 @@ convert_ascii_loop:
     call double_new_line
     CALL system_pause
 
+
+    ; Return to main menu
+    call menu
+
     ret
 
 res_invalidQty:
-    lea dx, invalidQty_msg
+    lea dx, res_invalid_amount_msg
     mov ah, 09H 
     int 21h
 
     ret
-    
+
 restock endp
 
 
@@ -1346,5 +1407,6 @@ convert_loop1:
     
     ret
 Convertdb endp
+
 
 end main
