@@ -74,6 +74,7 @@
     enterChoice db 13,10,'Enter your choice > $'
     enterQuantity db 13,10,'Enter Quantity > $'
     sellItem_jumpTable db ''
+    tempInvQty DW ?
 
     ; Edit Item
     edit_menu           db 13, 10, '+==========+==========+'
@@ -680,6 +681,7 @@ skip6:
     mul bx
     add si,ax
     mov cx,[si]
+    mov tempInvQty, cx
 
 enterQty:
     lea dx,enterQuantity
@@ -693,14 +695,16 @@ enterQty:
     lea si,buffer+2
     xor ax,ax
     xor bx,bx
+    xor cx,cx
+    mov cx,10
 
     CALL convert_loop
 
-    cmp cx,ax
+    cmp tempInvQty,ax
     jl invalidQty
 
-    sub cx, ax
-    mov [si], cx
+    sub tempInvQty, ax
+    mov [si], offset tempInvQty
 
     CALL double_new_line
 
