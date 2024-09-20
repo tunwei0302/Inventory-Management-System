@@ -72,6 +72,7 @@
     res_invalid_amount_msg   db 13,10,'Invalid amount, please enter a value between 1 and 9.$'
     res_msg_current_stock db 'Current Stock for ', 0
     res_msg_colon db ': ', 0
+    tempResQty DW ?
 
     sellItemMenu        db 13,10,'==========================='
                         db 13,10,'        SELLING MENU'
@@ -516,6 +517,7 @@ res_skip:
     mul bx
     add si,ax
     mov cx,[si]
+    mov tempResQty, cx
 
 res_enterQty:
     lea dx,res_enterQuantity
@@ -529,18 +531,18 @@ res_enterQty:
     lea si,buffer+2
     xor ax,ax
     xor bx,bx
+    mov cx, 10
 
     CALL convert_loop
 
     ; Change from subtracting to adding the quantity
-    add cx, ax
-    mov [si], cx
+    add tempResQty, ax
 
     CALL double_new_line
 
 
     ; Display updated quantity message
-    mov ax,[si]
+    mov ax,tempResQty
     lea di,buffer+5
     dec di
 
@@ -600,12 +602,6 @@ itemList:
     mov ah,02h
     int 21h
 
-    
-    ;mov si,0
-    ;mov dx,si
-    ;add dx,'0'
-    ;mov ah,02h
-    ;int 21h
     mov bx,0
 
 singleDigit:
