@@ -99,6 +99,7 @@
     totalFloatPrice dw 0
     inv_priceBuffer dw 2
     inv_quantityBuffer dw 2
+    priceBuffer db 6 dup(?)
 
     ; Edit Item
     edit_menu           db 13, 10, '+==========+==========+'
@@ -148,7 +149,7 @@ main proc
     mov ds, ax
     
     start:
-        ;call printHeader
+        call printHeader
         call loginPage
         cmp al, 0
         je exit
@@ -164,8 +165,8 @@ main endp
 
 loginPage proc
     login:
-        call clearScreen
-        call MoveCursorAscii
+        ;call clearScreen
+        ;call MoveCursorAscii
 
         ; Clear username buffer
         lea di, input_username + 2       ; Point to the start of the input buffer
@@ -386,7 +387,25 @@ restock proc
     int 21h ; Call DOS interrupt
     
     call itemList
-    
+    mov ah,9
+    int 21h
+    lea dx,totalPrice
+    mov ah,09h
+    int 21h
+
+    call getTotalPrice
+
+    xor ax,ax
+    mov ax,totalIntPrice
+    call printPrice
+;
+    xor ax,ax
+    mov dx,2eh
+    mov ah,02h    
+    int 21h
+;
+    mov ax,totalFloatPrice
+    call printPrice
     lea dx,res_enterChoice
     mov ah,09h
     int 21h
@@ -404,7 +423,7 @@ restock proc
 
     sub ax,1
     mov tempInvIndex,ax
-    
+
     mov bx,2
     lea si,inv_quantity
     mul bx
@@ -632,27 +651,9 @@ singleDigit:
     je skip6
     jmp itemLists
 skip6:
-    ;mov ah,9
-    ;int 21h
-    ;lea dx,totalPrice
-    ;mov ah,09h
-    ;int 21h
-;
-    ;call getTotalPrice
-;
-    ;xor ax,ax
-    ;mov ax,totalIntPrice
-    ;call printPrice
-;
-    ;xor ax,ax
-    ;mov dx,2eh
-    ;mov ah,02h    
-    ;int 21h
-;
-    ;mov ax,totalFloatPrice
-    ;call printPrice
+    
 
-
+    
     ret
 itemList endp
 
@@ -707,6 +708,26 @@ end_switch_sell:
     mov ah, 09h            
     int 21h 
 
+    xor dx,dx
+    mov ah,9
+    int 21h
+    lea dx,totalPrice
+    mov ah,09h
+    int 21h
+
+    call getTotalPrice
+
+    xor ax,ax
+    mov ax,totalIntPrice
+    call printPrice
+;
+    xor ax,ax
+    mov dx,2eh
+    mov ah,02h    
+    int 21h
+;
+    mov ax,totalFloatPrice
+    call printPrice
     lea dx,[enterSellItem]
     mov ah,09h
     int 21h
@@ -847,8 +868,9 @@ qtySkip:
     xor bx,bx
     mov bx,100
     div bx
+    mov temp,dx
 
-    lea di, buffer + 5      
+    lea di, priceBuffer + 5      
     mov byte ptr [di], '$'  
     dec di                  
 
@@ -864,7 +886,7 @@ qtySkip:
 
     xor ax,ax
     mov ax,temp
-    lea di, buffer + 5      
+    lea di, priceBuffer + 5      
     mov byte ptr [di], '$'  
     dec di  
     
@@ -1008,7 +1030,7 @@ edit_item_name_page proc
     return1:
         ret
 
-endp
+edit_item_name_page endp
 
 edit_item_price_page proc
     edit_price1:
@@ -1254,7 +1276,35 @@ get_name_offset proc
 get_name_offset endp
 
 calculateTotal proc
-    ret
+
+    call clearScreen
+
+    call itemList
+    mov ah,9
+    int 21h
+    lea dx,totalPrice
+    mov ah,09h
+    int 21h
+
+    call getTotalPrice
+
+    xor ax,ax
+    mov ax,totalIntPrice
+    call printPrice
+;
+    xor ax,ax
+    mov dx,2eh
+    mov ah,02h    
+    int 21h
+;
+    mov ax,totalFloatPrice
+    call printPrice
+
+    call double_new_line
+
+    call system_pause
+    
+    jmp menu
 calculateTotal endp
 
 convert_loop proc
@@ -1456,7 +1506,8 @@ Convertdb endp
 
 getTotalPrice proc
     mov cx,0
-
+    mov totalIntPrice,0
+    mov totalFloatPrice,0
 addTotal:
     
     lea si,inv_quantityBuffer
@@ -1484,6 +1535,7 @@ addTotal:
     mov bx,100
     div bx
 
+    
     add totalIntPrice,ax
     add totalFloatPrice,dx
     inc cx
@@ -1510,8 +1562,8 @@ getTotalPrice endp
 
 printPrice proc
 ;convert to string
-    mov buffer,0
-    lea di,buffer+5
+    mov priceBuffer,0
+    lea di,priceBuffer+5
     mov byte ptr [di],'$'
     dec di
 
