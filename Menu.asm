@@ -108,6 +108,7 @@
     press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
     invalidQty_msg db 13,10,'Not enough quantity to be sold! Please Try Again!'
     new_line db 13, 10, '$'
+    count dw ?
 .code
 main proc
 
@@ -363,7 +364,6 @@ itemList:
 
     mov bx,si
     inc bx
-    ;add bx,'0'
 
     cmp bx,9
     jle singleDigit
@@ -399,13 +399,39 @@ singleDigit:
     mov ah ,09h
     int 21h
 
+    mov dx,9
+    mov ah,02h
+    int 21h
+
+    xor bx,bx
+    mov bx,2
+    xor ax,ax
+    mov ax,si
+    mul bx
+    
+    mov count,si
+
+    lea si,inv_quantity
+    add si,ax
+    xor ax,ax
+    mov ax,[si]
+    
+    lea di, buffer + 5      
+    mov byte ptr [di], '$'  
+    dec di                  
+
+    call Convertdb
+
+    xor dx,dx
+    xor ax,ax
+    ;new line
     mov dx,13
     mov ah,02h
     int 21h
     mov dx,10
-    mov ah,02h
     int 21h
 
+    mov si,count
     inc si
     loop itemlist
 
@@ -1104,5 +1130,23 @@ MoveCursorAscii proc
 
     ret
 MoveCursorAscii endp
+
+Convertdb proc
+convert_loop1:
+    xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
+    mov bx, 10              ; Dividing by 10 to extract the least significant digit
+    div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
+    add dl, '0'             ; Convert the remainder to ASCII by adding '0' (48)
+    mov [di], dl            ; Store the ASCII character in the buffer
+    dec di                  ; Move the pointer to the next position
+    test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
+    jnz convert_loop1         ; If AX is not zero, continue
+    
+    ; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
+    ret
+Convertdb endp
 
 end main
