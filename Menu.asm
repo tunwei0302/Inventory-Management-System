@@ -77,9 +77,13 @@
 
     sellItemMenu        db 13,10,'==========================='
                         db 13,10,'        SELLING MENU'
-                        db 13,10,'===========================',13,10,'$'
+                        db 13,10,'===========================$'
+    sellItemMenuOption  db 13,10,'1. Sell Item'
+                        db 13,10,'2. Exit To Main Menu $'
     enterChoice db 13,10,'Enter your choice > $'
-    enterQuantity db 13,10,'Enter Quantity > $'
+    exitSellItem    db '11.Exit',13,10,'$'
+    enterSellItem   db 13,10,'Enter Item No > $'
+    enterQuantity db 13,10,'Enter Sell Quantity > $'
     totalProfit db 13,10,'Total Profit > $'
     sellItem_jumpTable db ''
     tempInvQty DW ?
@@ -121,9 +125,9 @@
     amount db ?
     temp_price dw ?
 
+    input_exit  db 13,10,'Exiting... $'
     input_error db 13, 10, 'Input Error ! Please Try Again !!$'
     press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
-    invalidQty_msg db 13,10,'Not enough quantity to be sold! Please Try Again!'
     new_line db 13, 10, '$'
     count dw ?
     temp dw ?
@@ -585,6 +589,7 @@ res_invalidQty:
 
 restock endp
 
+;Print Item List
 itemList proc
     mov cx,10
     mov si,0
@@ -693,7 +698,7 @@ singleDigit:
 ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
     mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
+    int 21h                 ; Call DOS interrupt 
 
     xor dx,dx
     xor ax,ax
@@ -714,22 +719,67 @@ singleDigit:
     ret
 itemList endp
 
+;Sell Item Function
 sellItem proc
-    call clearScreen
+    call clearScreen        ;Clear Screen
 
+    lea dx,[sellItemMenu]   ;Display Menu
+    mov ah,09h
+    int 21h
+
+    lea dx,[sellItemMenuOption] ;Display Options
+    mov ah,09h
+    int 21h
+
+    lea dx, [enterChoice]   ;Display Enter Choice
+    mov ah,09h
+    int 21h
+
+    mov ah,01h              ;Input
+    int 21h
+
+    ;convert into numeric value
+    sub al,'0'
+    cmp al, 1       ;get options
+    je end_switch_sell  ;end of switch case
+    cmp al, 2
+    JE SELL_EQUAL
+    JNE SELL_NOT_EQUAL  ;not equal then invalid
+
+SELL_EQUAL:
+    jmp menu
+
+SELL_NOT_EQUAL:
+    lea dx, [input_error]
+    mov ah,09h
+    int 21h
+
+    CALL double_new_line
+    CALL system_pause
+    jmp sellItem
+
+end_switch_sell:
+    call ClearScreen
     lea dx,[sellItemMenu]
     mov ah,09h
     int 21h
-    
-    call itemList
 
-skip6:
-
-    lea dx,enterChoice
+    lea dx,[new_line]
     mov ah,09h
     int 21h
 
-    lea dx,buffer
+    call itemList   ;Display Item list
+
+skip6:
+    lea dx,[exitSellItem]
+    mov ah, 09h            
+    int 21h 
+
+    lea dx,[enterSellItem]
+    mov ah,09h
+    int 21h
+
+    lea dx,buffer       ;get input
     mov ah,0ah
     int 21h
 
@@ -738,8 +788,37 @@ skip6:
     mov cx,10
     xor bx,bx
 
-    CALL convert_loop
+    CALL convert_loop   ;convert ascii into numeric
 
+    ;if 11 exit
+    cmp ax,11
+    je SELL2_EQUAL
+    jne SELL2_NOT_EQUAL
+
+SELL2_EQUAL:
+    lea dx,[input_exit]
+    mov ah, 09h            
+    int 21h
+    CALL double_new_line
+    CALL system_pause
+    jmp sellItem
+
+SELL2_NOT_EQUAL:
+    cmp ax, 0 ;find if is digit 
+    jl SELL_INVALID
+    cmp ax, 12
+    jge SELL_INVALID
+    jl SELL_VALID
+
+SELL_INVALID:
+    lea dx, input_error
+    mov ah,09h
+    int 21h
+    CALL double_new_line
+    CALL system_pause
+    jmp end_switch_sell
+
+SELL_VALID: ;continue
     sub ax,1
     mov tempInvIndex,ax
     mov bx,2
@@ -749,7 +828,7 @@ skip6:
     mov cx,[si]
     mov tempInvQty, cx
 
-enterQty:
+enterQty:   ;enter quantity
     lea dx,enterQuantity
     mov ah,09h
     int 21h
@@ -766,7 +845,21 @@ enterQty:
 
     CALL convert_loop
 
-    cmp tempInvQty,ax
+    ;max and min quantity validation
+    cmp ax, 99  ;max
+    jg SELL2_INVALID
+    cmp ax, 1   ;min not less than 1
+    jl SELL2_INVALID
+    jmp SELL2_VALID
+
+SELL2_INVALID:
+    lea dx, input_error
+    mov ah, 09H
+    int 21h
+    jmp enterQty
+
+SELL2_VALID:
+    cmp tempInvQty,ax ;check if sell quantity is higher than inv quantity
     jge qtySkip
     jmp invalidQty
 
@@ -774,6 +867,17 @@ qtySkip:
 
     sub tempInvQty, ax
     mov sellAmount,ax
+
+    ;saving quantity into array
+    xor ax,ax
+    mov ax, [tempInvIndex]
+    mov bx,2
+    lea si,inv_quantity
+    mul bx
+    add si,ax
+    xor ax,ax
+    mov ax, [tempInvQty]
+    mov [si], ax
 
     ;print total profit
     xor ax,ax
@@ -800,11 +904,9 @@ qtySkip:
     mov bx,100
     div bx
 
-
     lea di, buffer + 5      
     mov byte ptr [di], '$'  
     dec di                  
-
 
     call Convertdb
 ; Print the result
@@ -828,80 +930,18 @@ qtySkip:
     mov ah, 09h             ; DOS interrupt to print the string
     int 21h                 ; Call DOS interrupt
 
-    CALL double_new_line
-
-
-    ;display quantity
-    mov ax,tempInvQty
-    lea di,buffer+5
-    dec di
-
-convert_ascii_loop:
-    xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
-    mov bx, 10              ; Dividing by 10 to extract the least significant digit
-    div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
-    add dl, '0'             ; Convert the remainder to ASCII by adding '0' (48)
-    mov [di], dl            ; Store the ASCII character in the buffer
-    dec di                  ; Move the pointer to the next position
-    test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
-    jnz convert_ascii_loop         ; If AX is not zero, continue
-    
-    ; Print the result
-    lea dx, [di+1]          ; DX points to the first character of the converted number
-    mov ah, 09h             ; DOS interrupt to print the string
-    int 21h                 ; Call DOS interrupt
-
     call double_new_line
     CALL system_pause
 
+    JMP end_switch_sell
     ret
 
 invalidQty:
-    lea dx, invalidQty_msg
+    lea dx, input_error
     mov ah, 09H
     int 21h
     jmp enterQty
 
-    ;xor bx,bx
-    ;mov bx,20 
-    ;mul bx
-
-    ;lea si,inv_name
-    ;add si,AX
-
-
-
-
-    ; lea si,inv_name
-    ; add si,ax 
-    ; lea dx,[si] 
-
-    ; mov  ah,09h 
-    ; int 21h
-
-
-
-
-    
-    ; sub al,'0'
-    ; dec al
-
-    ; mov dx,ax;
-    ; mov ah,02h
-    ; int 21h
-    ; xor ah,ah
-    ; xor bx,bx
-    ; mov bl,20
-    ; mul bl
-
-
-
-    ; lea si,inv_name
-    ; add si,ax
-    
-    ; lea dx,[si]
-    ; mov ah,09h
-    ; int 21h
 sellItem endp
 
 editMenu proc
