@@ -253,8 +253,8 @@ checkLogin proc
         mov bl, [di]              ; Load byte from str2 into BL
         cmp al, bl                ; Compare the two characters
         jne failed                ; If characters differ, strings are not equal
-        test al, al               ; Check if we reached the null terminator (0)
-        jz equal                  ; If null terminator, strings matched
+        cmp al,'$'               ; Check if we reached the null terminator (0)
+        je equal                  ; If null terminator, strings matched
         inc si                    ; Move to the next character in str1
         inc di                    ; Move to the next character in str2
         loop compare_loop         ; Continue until CX reaches 0 (unnecessary for fixed length)
