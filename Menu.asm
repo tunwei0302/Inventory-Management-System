@@ -391,7 +391,6 @@ itemList:
 
 singleDigit:
 
-
     mov dx,bx
     add dx,'0'
     mov ah,02h
@@ -443,7 +442,6 @@ singleDigit:
     add si,ax
     mov cx,[si]
 
-
 enterQty:
     lea dx,enterQuantity
     mov ah,09h
@@ -469,22 +467,23 @@ enterQty:
 
     ;display quantity
     mov ax,[si]
-    lea si, buffer + 4
-
-    mov bx,10
+    lea di,buffer+5
+    dec di
 
 convert_ascii_loop:
-    xor dx,dx
-    div bx
-    add dl,'0' ;ASCII digit
-    mov [si], dl
-    dec si
-    cmp ax,0
-    jne convert_ascii_loop
-
-    lea dx, [si]
-    mov ah,09h
-    int 21h
+    xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
+    mov bx, 10              ; Dividing by 10 to extract the least significant digit
+    div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
+    add dl, '0'             ; Convert the remainder to ASCII by adding '0' (48)
+    mov [di], dl            ; Store the ASCII character in the buffer
+    dec di                  ; Move the pointer to the next position
+    test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
+    jnz convert_ascii_loop         ; If AX is not zero, continue
+    
+    ; Print the result
+    lea dx, [di+1]          ; DX points to the first character of the converted number
+    mov ah, 09h             ; DOS interrupt to print the string
+    int 21h                 ; Call DOS interrupt
 
     call double_new_line
     CALL system_pause
