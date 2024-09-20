@@ -45,27 +45,69 @@
 
     exit_con        db 13, 10, 'Are you sure you want to EXIT THE SYSTEM !!! [Y=yes : N=No]: $'
 
-    invSize equ 200 ; SIZE OF STOCK
-        inv_Id DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
-        inv_name    DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
+    ; Inventory 
+    invSize             equ 200 ; SIZE OF STOCK
+        inv_Id          DW 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ;item id
+        inv_name        DB "PENCIL             $", "ERASER             $", "RULER              $", "CORRECTION TAPE    $", "MARKER PEN         $",\
              "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
         inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
-        inv_price    dd 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
-    mainMenuOption db 13,10,'Inventory Management System',13,10
-               db '===========================',13,10
-               db '1. Restock',13,10
-               db '2. Sell item',13,10
-               db '3. Edit item',13,10
-               db '4. Calculate Total',13,10
-               db 'Enter your choice > $'
-    inputError db 13,10,'Input Invalid! Please try again later.',13,10,'$'
-    sellItemMenu db 13,10,'==========================='
-                 db 13,10,'        SELLING MENU'
-                 db 13,10,'===========================',13,10,'$'
+        inv_price       dd 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
+    
+    current_item_count db 10d
+
+    ; Main Menu
+    mainMenuOption      db 13,10,' Inventory Management System ',13,10
+                        db '+=============================+',13,10
+                        db '1. Restock',13,10
+                        db '2. Sell item',13,10
+                        db '3. Edit item',13,10
+                        db '4. Calculate Total',13,10
+                        db '5. Logout', 13, 10
+                        db 'Enter your choice > $'
+    inputError          db 13,10,'Input Invalid! Please try again later.',13,10,'$'
+    sellItemMenu        db 13,10,'==========================='
+                        db 13,10,'        SELLING MENU'
+                        db 13,10,'===========================',13,10,'$'
     enterChoice db 13,10,'Enter your choice > $'
     sellItem_jumpTable db ''
-    buffer db 20 dup('$')
 
+    ; Edit Item
+    edit_menu           db 13, 10, '+==========+==========+'
+                        db 13, 10, '    Edit Items Menu'
+                        db 13, 10, '+==========+==========+'
+                        db 13, 10, '1. Edit Item Name'
+                        db 13, 10, '2. Edit Item Price'
+                        db 13, 10, '3. Edit Item Quantity'
+                        db 13, 10, '4. Add Item'
+                        db 13, 10, '5. Delete Item'
+                        db 13, 10, '6. Return'
+                        db 13, 10, 'Enter your choice > $'
+
+    prev_name           db 13, 10, 'Item Previous Name: $'
+    new_name            db 13, 10, 'Item New Name [Enter R to Return]: $'
+
+    item_selected       db 13, 10, 'Item selected: $'
+    prev_price          db 13, 10, 'Previous Price: $'
+    new_price           db 13, 10, 'New Price: $'
+
+    prev_quantity       db 13, 10, 'Previous Quantity: $'
+    new_quantity        db 13, 10, 'New Quantity: $'
+
+    add_item_name       db 13, 10, 'New Item Name: $'
+    add_item_price      db 13, 10, 'New Item Price: $'
+    add_item_quantity   db 13, 10, 'New Item Quantity: $'
+
+    delete_item         db 13, 10, 'Delete Item: '
+                        db 13, 10, 'Enter Item No you wish to DELETE: $'
+
+    input_con           db 13, 10, 'Confirm Action [Y=yes : N=No]: $'
+    delete_con          db 13, 10, 'Are You Sure You Want To DELETE This Item!! [Y=yes : N=No]: $'
+
+    temp_name           db 20
+                        db 0 
+                        db 20 
+
+    buffer db 20 dup('$')
     input_error db 13, 10, 'Input Error ! Please Try Again !!$'
     press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
     new_line db 13, 10, '$'
@@ -77,7 +119,7 @@ main proc
     
     start:
         ;call printHeader
-        call loginpage
+        call loginPage
         cmp al, 0
         je exit
 
@@ -90,7 +132,7 @@ main proc
 
 main endp
 
-loginpage proc 
+loginPage proc
     login:
         call clearScreen
         call MoveCursorAscii
@@ -124,13 +166,9 @@ loginpage proc
         cmp al, 0                        ; Check if return value is 0 (failure)
         je login
 
-        mov ah, 09h
         mov dx, offset success_msg       ; Print Successful Login msg
-        int 21h
-        mov dx, offset new_line
-        int 21h
-        mov dx, offset new_line
-        int 21h
+        call PrintString
+        call double_new_line
 
         call system_pause
         mov al, 1
@@ -149,7 +187,7 @@ loginpage proc
         je login
         cmp al, "n"
         je login
-        jne wrong_input
+        jne wrong_input1
 
     enter_name:
         mov dx, offset username_prompt   ; Prompt for username
@@ -183,29 +221,25 @@ loginpage proc
         mov al, [input_password+1]       ; Number of characters entered is at input_password+1
         xor ah, ah
         lea si, [input_password+2]       ; Point to the first character of the input
-        add si, ax
+        add si, ax                       ; Move to the end of the entered username
         mov byte ptr [si], '$'           ; Add the '$' to terminate the string
 
         jmp validate_login
 
-    wrong_input:                         ; Print Input Error Msg for User to Know
+    wrong_input1:                         ; Print Input Error Msg for User to Know
         mov ah, 09h 
         mov dx, offset input_error
         int 21h 
         
-        mov ah, 09h 
-        mov dx, offset new_line
-        int 21h
-        mov dx, offset new_line
-        int 21h
+        call double_new_line
         jmp exit_confirmation
 
     exit_login:
         mov al,0
         ret
-endp
+loginPage endp
 
-checklogin proc
+checkLogin proc
     cld
     mov cx, 20                ; Set a reasonable maximum length for comparison
     compare_loop:
@@ -225,21 +259,18 @@ checklogin proc
 
     failed:
         ; Print failure message
-        mov ah, 09h
         mov dx, offset fail_msg
-        int 21h
-        mov dx, offset new_line
-        int 21h
-        mov dx, offset new_line
-        int 21h
+        call PrintString
+        call double_new_line
 
         call system_pause
         mov al, 0
         ret
 
-endp
+checkLogin endp
 
 menu proc
+    call clearScreen
     lea dx,mainMenuOption
     mov ah,09h
     int 21h
@@ -258,24 +289,21 @@ skip1:
 skip2:
     cmp al,3
     jne skip3
-    jmp editItem
+    call editMenu
 skip3:
     cmp al,4
     jne skip4
     jmp calculateTotal
 skip4:
-
+    cmp al,5
+    jne skip5
+    ret
+skip5:
     lea dx,[inputError]
     mov ah,09h
     int 21h
     jmp menu
 
-
-
-    
-
-
-    ret
 menu endp
 
 printHeader proc
@@ -467,9 +495,167 @@ convert_loop:
 sellItem endp
 
 
-editItem proc
-    ret
-editItem endp
+editMenu proc
+    edit_start:
+        call clearScreen
+        mov dx, offset edit_menu
+        call PrintString
+        
+        mov ah,01h
+        int 21h
+
+        sub al,'0'
+        cmp al,1
+        jne skip1_1
+        call edit_item_name_page
+        jmp edit_start
+    skip1_1:
+        cmp al,2
+        jne skip1_2
+        call edit_item_price_page
+        jmp edit_start
+    skip1_2:
+        cmp al,3
+        jne skip1_3
+        call edit_item_quantity_page
+        jmp edit_start
+    skip1_3:
+        cmp al,4
+        jne skip1_4
+        call add_item_page
+        jmp edit_start
+    skip1_4:
+        cmp al,5
+        jne skip1_5
+        call delete_item_page
+        jmp edit_start
+    skip1_5:
+        cmp al,6
+        jne skip1_6
+        ret
+    skip1_6:
+        mov dx, offset inputError
+        mov ah,09h
+        int 21h
+
+        call double_new_line
+        call system_pause
+        jmp edit_start
+
+editMenu endp
+
+edit_item_name_page proc
+    edit_name1:
+        ;call selectItem
+        mov dx, offset prev_name
+        call PrintString
+
+        lea dx, inv_name 
+        call PrintString
+
+        mov dx, offset new_name
+        call PrintString
+
+        lea dx, temp_name
+        mov ah, 0Ah
+        int 21h
+
+        cmp [temp_name+2], 'R'
+        je return1
+        cmp [temp_name+2], 'r'
+        je return1
+
+        mov dx, offset input_con
+        call PrintString
+
+        mov ah, 01h
+        int 21H    
+        cmp al, "Y"
+        je edit_name2
+        cmp al, "y"
+        je edit_name2
+        cmp al, "N"
+        je edit_name1
+        cmp al, "n"
+        je edit_name1
+        jne wrong_input2
+
+    edit_name2:
+        ; Replace inv name with temp name
+        lea si, temp_name+2             ; Point to the new name (after length byte)
+        lea di, inv_name                ; Point to the start of inv_name
+        mov al, [temp_name+1]           ; get the length of temp name
+        xor ah, ah
+        mov cx, ax                      
+        
+        replace_loop:
+            mov al, [si]                ; Load byte from temp_name
+            mov [di], al                ; Store byte in inv_name
+            inc si                     
+            inc di                     
+            loop replace_loop              ; Repeat for all characters
+            
+            mov al, [temp_name+1] 
+            mov bl, 19                 
+            sub bl, al
+            xor bh, bh                 
+            mov cx, bx
+        fill_spaces:
+            mov al, ' '                 ; Load space character
+            mov [di], al                ; Store space character in inv_name
+            inc di                     
+            loop fill_spaces           
+
+        
+            mov al, '$'                ; Add dollar sign at the end
+            mov [di], al 
+            jmp return1                   
+
+    wrong_input2:
+        mov ah, 09h 
+        mov dx, offset input_error
+        int 21h 
+        
+        call double_new_line
+        call system_pause
+        jmp edit_name1
+
+    return1:
+        ret
+
+endp
+
+edit_item_price_page proc
+    edit_price1:
+        ;call selectItem
+        mov dx, offset item_selected
+        call PrintString
+
+        lea dx, inv_price
+        call PrintString
+
+        mov dx, offset prev_price
+        call PrintString
+
+        lea dx, inv_price 
+        call PrintString
+
+        lea dx, inv_price+2 
+        call PrintString
+
+edit_item_price_page endp
+
+edit_item_quantity_page proc
+
+edit_item_quantity_page endp
+
+add_item_page proc
+
+add_item_page endp
+
+delete_item_page proc
+
+delete_item_page endp
 
 calculateTotal proc
     ret
@@ -596,7 +782,15 @@ getDateTime endp
 
 
 
+double_new_line proc
+    mov ah, 09h
+    mov dx, offset new_line
+    int 21h
+    mov dx, offset new_line
+    int 21h
 
+    ret
+double_new_line endp
 
 clear_login_buffer proc 
     clear_buffer:
@@ -605,7 +799,7 @@ clear_login_buffer proc
         loop clear_buffer            ; Repeat until CX is 0
     
     ret
-endp
+clear_login_buffer endp
 
 DisplayTime proc
 
@@ -649,7 +843,7 @@ system_pause proc
     int 21h
 
     ret
-endp
+system_pause endp
 
 MoveCursorAscii proc    
     mov ah,02h
