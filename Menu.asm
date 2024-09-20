@@ -136,6 +136,7 @@
     amount db ?
     temp_price dw ?
 
+    prompt_selectNo     db 13, 10, 'Select Item No [1 - 10] [Enter R to Return]: $'
     input_exit  db 13,10,'Exiting... $'
     input_error db 13, 10, 'Input Error ! Please Try Again !!$'
     press_enter db 13, 10, '+----- Press Enter to Continue -----+$' 
@@ -950,16 +951,16 @@ editMenu endp
 
 edit_item_name_page proc
     edit_name1:
-        ;call selectItem
+        call clearScreen
+        call itemList
         call get_name_offset
+        cmp bl, 0
+        je return1
+
         mov dx, offset prev_name
         call PrintString
 
-        lea dx, inv_name 
-        call PrintString
-
-        mov bx, ax
-        lea dx, [inv_name+bx] 
+        mov dx, di 
         call PrintString
 
         mov dx, offset new_name
@@ -992,7 +993,6 @@ edit_item_name_page proc
     edit_name2:
         ; Replace inv name with temp name
         lea si, temp_name+2             ; Point to the new name (after length byte)
-        lea di, inv_name                ; Point to the start of inv_name
         mov al, [temp_name+1]           ; get the length of temp name
         xor ah, ah
         mov cx, ax                      
@@ -1033,247 +1033,176 @@ edit_item_name_page proc
 edit_item_name_page endp
 
 edit_item_price_page proc
-    edit_price1:
-        ;call selectItem
-        ; mov dx, offset item_selected
-        ; call PrintString
-
-        ; lea dx, inv_price
-        ; call PrintString
-
-        mov dx, offset new_price
-        call PrintString
-
-        lea dx, input_buffer
-        mov ah, 0Ah
-        int 21h
-        
-        cmp [input_buffer+2], 'R'
-        je return2
-        cmp [input_buffer+2], 'r'
-        je return2
-
-        mov dx, offset input_con
-        call PrintString
-
-        mov ah, 01h
-        int 21H    
-        cmp al, "Y"
-        je edit_price2
-        cmp al, "y"
-        je edit_price2
-        cmp al, "N"
-        je edit_price1
-        cmp al, "n"
-        je edit_price1
-        jne wrong_input2
-
-    edit_price2:
-        lea si, input_buffer + 2
-        xor ax, ax 
-        xor bx, bx 
-        mov cx, 5
-        mov dx, 10 
-
-        check_price1:
-            cmp cx, 3
-            je check_price2
-            mov bl, [si]
-            sub bl, '0'
-
-            cmp bl, 9
-            jg price_format_error
-            mul dx ; Multiply AX by 10
-            add ax, bx ; Add the digit to AX
-            inc si ; Move to the next character
-            loop check_price1
-
-        check_price2:
-            mov bl, [si]
-            cmp bl, '.'
-            jne price_format_error
-            inc si
-            mov cx, 2
-
-        check_price3:
-            mov bl, [si]
-            sub bl, '0'
-            cmp bl, 9
-            jg price_format_error
-            mul dx ; Multiply AX by 10
-            add ax, bx ; Add the fractional digit
-            inc si
-            loop check_price3
-            jmp check_price_range
-
-    return2:
-        ret
-
-    price_format_error:
-        mov dx, offset price_error
-        call PrintString
-        
-        call double_new_line
-        call system_pause
-        jmp edit_price1
-
-    price_range_error:
-        mov dx, offset price_range
-        call PrintString
-        
-        call double_new_line
-        call system_pause
-        jmp edit_price1
-
-    check_price_range:
-        cmp ax, 1
-        jl price_range_error
-        cmp ax, 9999
-        jg price_range_error
-
-        lea di, inv_price   ; Load the address of inv_price into DI
-        mov [di], ax        ; Replace the first element (2000) with the value in AX
-        jmp return2
-
-    wrong_input2: 
-        mov dx, offset input_error
-        call PrintString
-        
-        call double_new_line
-        call system_pause
-        jmp edit_price1
+    
 
 edit_item_price_page endp
 
 edit_item_quantity_page proc
-    edit_quantity1:
-        ;call selectItem
-        ; mov dx, offset item_selected
-        ; call PrintString
-
-        ; lea dx, inv_price
-        ; call PrintString
-
-        mov dx, offset new_quantity
-        call PrintString
-
-        lea dx, input_buffer
-        mov ah, 0Ah
-        int 21h
-
-        cmp [input_buffer+2], 'R'
-        je return3
-        cmp [input_buffer+2], 'r'
-        je return3
-
-        mov dx, offset input_con
-        call PrintString
-
-        mov ah, 01h
-        int 21H    
-        cmp al, "Y"
-        je edit_quantity2
-        cmp al, "y"
-        je edit_quantity2
-        cmp al, "N"
-        je edit_quantity1
-        cmp al, "n"
-        je edit_quantity1
-        jne wrong_input3
-
-    edit_quantity2:
-        lea si, input_buffer+2
-        mov cl, [input_buffer+1]
-        xor ax, ax 
-        xor bx, bx 
-        mov dx, 10 
-
-        check_quantity1:
-            mov bl, [si]
-            sub bl, '0'
-
-            mul dx ; Multiply AX by 10
-            add ax, bx ; Add the digit to AX
-            inc si ; Move to the next character
-            loop check_quantity1
-            jmp check_quantity_range
-
-    return3:
-        ret
-
-    quantity_range_error:
-        mov dx, offset quantity_range
-        call PrintString
-        
-        call double_new_line
-        call system_pause
-        jmp edit_quantity1
-
-    check_quantity_range:
-        cmp ax, 0
-        jl quantity_range_error
-        cmp ax, 99
-        jg quantity_range_error
-
-        lea di, inv_quantity   
-        mov [di], ax        
-        jmp return2
-
-    wrong_input3: 
-        mov dx, offset input_error
-        call PrintString
-        
-        call double_new_line
-        call system_pause
-        jmp edit_quantity1
+    
 
 edit_item_quantity_page endp
 
 get_name_offset proc
-    ; name_offset1:
-    ;     mov dx, offset new_name
-    ;     call PrintString
+    name_offset1:
+        ; Prompt user to select an item number
+        mov dx, offset prompt_selectNo
+        call PrintString
 
-    ;     mov ah, 01h 
-    ;     int 21h
+        ; Get input from the user
+        lea dx, buffer
+        mov ah, 0ah
+        int 21h
+
+        ; Check if input starts with 'R' or 'r' (special case)
+        cmp byte ptr [buffer+2], 'R'    ; Compare the first byte with 'R'
+        je return4                      ; If equal, jump to return4
+        cmp byte ptr [buffer+2], 'r'    ; Compare with 'r'
+        je return4                      ; If equal, jump to return4
+
+        ; Convert input from string to number
+        lea si, buffer+2
+        xor ax, ax                      ; Clear AX (input number)
+        xor bx, bx                      ; Clear BX (not used)
+        mov cx, 10                      ; Set base for number conversion (decimal)
+
+        call convert_loop                ; Call conversion routine (assuming it's correct)
+
+        ; Check if the number is within the valid range (1-10)
+        cmp ax, 1                        ; Is input < 1?
+        jl item_range_error              ; Jump if less than 1 (invalid)
+        cmp ax, 10                       ; Is input > 10?
+        jg item_range_error              ; Jump if greater than 10 (invalid)
+
+        ; Calculate the correct offset for the item name
+        sub ax, 1                        ; Convert to zero-based index (0 = first item)
+        mov bx, 20                       ; Each item is 20 bytes long
+        mul bx                           ; Multiply AX (index) by 20 (offset calculation)
+
+        lea di, inv_name                 ; Load the base address of inv_name
+        add di, ax                       ; Add calculated offset to SI
         
-    ;     cmp al, "R"
-    ;     je return4
-    ;     cmp al, "r"
-    ;     je return4
+        ret
 
-    ;     sub al, 
-    ;     cmp al, 0
-    ;     jl item_range_error
-    ;     cmp al, 10
-    ;     jg item_range_error 
-    ;     cmp al, 1 
-    ;     je name_offset2
-    ;     jmp name_offset3
+    item_range_error:
+; Print error message for invalid input
+        mov dx, offset input_error
+        call PrintString
 
-    ; name_offset2: 
-    ;     ; mov name_address, 0
-    ;     jmp return4
+        call double_new_line
+        call system_pause
+        jmp name_offset1                 ; Go back to the input prompt
 
-    ; name_offset3:
-    ;     mov ah, 0
-    ;     mov bx, 20
-    ;     mul bx
-    ;     ; name_address, ax
-    ;     jmp return4
-
-    ; item_range_error:
-    ;     ; mov dx, offset
-    ;     ; call PrintString
-
-    ;     call double_new_line
-    ;     call system_pause
-    ;     jmp name_offset1
-
-    ; return4:
-    ;     ret
+    return4:
+        mov bl, 0
+        ret                              ; Return if 'R' or 'r' was detected
 
 get_name_offset endp
+
+get_price_offset proc
+    price_offset1:
+        mov dx, offset prompt_selectNo
+        call PrintString
+
+        ; Get input from the user
+        lea dx, buffer
+        mov ah, 0ah
+        int 21h
+
+        ; Check if input starts with 'R' or 'r' (special case)
+        cmp byte ptr [buffer+2], 'R'    ; Compare the first byte with 'R'
+        je return5                      ; If equal, jump to return5
+        cmp byte ptr [buffer+2], 'r'    ; Compare with 'r'
+        je return5                      ; If equal, jump to return5
+
+        ; Convert input from string to number
+        lea si, buffer+2
+        xor ax, ax                      ; Clear AX (input number)
+        xor bx, bx                      ; Clear BX (not used)
+        mov cx, 10                      ; Set base for number conversion (decimal)
+
+        call convert_loop                ; Call conversion routine (assuming it's correct)
+
+        ; Check if the number is within the valid range (1-10)
+        cmp ax, 1                        ; Is input < 1?
+        jl item_range_error2              ; Jump if less than 1 (invalid)
+        cmp ax, 10                       ; Is input > 10?
+        jg item_range_error2              ; Jump if greater than 10 (invalid)
+
+        ; Calculate the correct offset for the item name
+        sub ax, 1                        ; Convert to zero-based index (0 = first item)
+        mov bx, 2                       ; Each item is 20 bytes long
+        mul bx                              
+
+        lea di, inv_price
+        add di, ax
+        ret
+
+    item_range_error2:
+; Print error message for invalid input
+        mov dx, offset input_error
+        call PrintString
+
+        call double_new_line
+        call system_pause
+        jmp price_offset1                 ; Go back to the input prompt
+
+    return5:
+        mov bl, 0
+        ret                              ; Return if 'R' or 'r' was detected
+get_price_offset endp
+
+get_quantity_offset proc
+    quantity_offset1:
+        mov dx, offset prompt_selectNo
+        call PrintString
+
+        ; Get input from the user
+        lea dx, buffer
+        mov ah, 0ah
+        int 21h
+
+        ; Check if input starts with 'R' or 'r' (special case)
+        cmp byte ptr [buffer+2], 'R'    ; Compare the first byte with 'R'
+        je return8                      ; If equal, jump to return5
+        cmp byte ptr [buffer+2], 'r'    ; Compare with 'r'
+        je return8                      ; If equal, jump to return5
+
+        ; Convert input from string to number
+        lea si, buffer+2
+        xor ax, ax                      ; Clear AX (input number)
+        xor bx, bx                      ; Clear BX (not used)
+        mov cx, 10                      ; Set base for number conversion (decimal)
+
+        call convert_loop                ; Call conversion routine (assuming it's correct)
+
+        ; Check if the number is within the valid range (1-10)
+        cmp ax, 1                        ; Is input < 1?
+        jl item_range_error3              ; Jump if less than 1 (invalid)
+        cmp ax, 10                       ; Is input > 10?
+        jg item_range_error3              ; Jump if greater than 10 (invalid)
+
+        ; Calculate the correct offset for the item name
+        sub ax, 1                        ; Convert to zero-based index (0 = first item)
+        mov bx, 2                       ; Each item is 20 bytes long
+        mul bx                              
+
+        lea di, inv_quantity
+        add di, ax
+        ret
+
+    item_range_error3:
+; Print error message for invalid input
+        mov dx, offset input_error
+        call PrintString
+
+        call double_new_line
+        call system_pause
+        jmp quantity_offset1                 ; Go back to the input prompt
+
+    return8:
+        mov bl, 0
+        ret                              ; Return if 'R' or 'r' was detected
+get_quantity_offset endp
 
 calculateTotal proc
 
