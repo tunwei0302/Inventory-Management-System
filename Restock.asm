@@ -2,18 +2,19 @@
 .stack 100h
 .data
     ; Define stock levels
-    restock_level dw 1000      ; Restock level threshold
-    max_stock dw 2000          ; Maximum stock level
+    restock_level dw 100      ; Restock level threshold
+    max_stock dw 100          ; Maximum stock level
     current_stock dw 50        ; Current stock level
+
 
     ; Define messages
     res_Header      db 13, 10, '+============================+'
                     db 13, 10, '         Restock Menu'
                     db 13, 10, '+============================+$'
     res_prompt_action db 0Dh, 0Ah, 'Enter A to add stock or R to reduce stock: $'
-    res_prompt_amount db 0Dh, 0Ah, 'Enter the amount (1-999): $'
+    res_prompt_amount db 0Dh, 0Ah, 'Enter the amount (1-99): $'
     res_invalid_action_msg db 0Dh, 0Ah, 'Invalid action, please try again.$'
-    res_invalid_amount_msg db 0Dh, 0Ah, 'Invalid amount, please enter a value between 1 and 999.$'
+    res_invalid_amount_msg db 0Dh, 0Ah, 'Invalid amount, please enter a value between 1 and 99.$'
     res_stock_msg db 0Dh, 0Ah, 'Current stock level: $'
     stock_buffer db 6, 0, 0, 0, 0, 0, 0  ; Buffer for stock level string
     ten dw 10
@@ -104,10 +105,10 @@ main PROC
         call string_to_number
         mov amount, ax
 
-        ; Validate the number (assuming max stock level is 999)
+        ; Validate the number (max stock level is 99)
         cmp ax, 1
         jl invalid_amount
-        cmp ax, 999
+        cmp ax, 99
         jg invalid_amount
 
         ret
@@ -199,7 +200,7 @@ main PROC
     print_stock_level PROC
         ; Print the current stock level
         lea dx, res_stock_msg
-        mov ah, 09h
+        mov ah, 09h 
         int 21h
 
         ; Convert current stock to string
@@ -219,8 +220,8 @@ main PROC
         jne convert_stock_to_string
 
         ; Print the stock level string
-        lea dx, stock_buffer
-        mov ah, 09h
+        lea dx, stock_buffer 
+        mov ah, 09h 
         int 21h
         ret
     print_stock_level ENDP
