@@ -1,7 +1,7 @@
 .model small
 .stack 100h
 .data
-    number dw 3000, 3000            ; The decimal number we want to convert
+    number dw 1234, 3000            ; The decimal number we want to convert
     buffer db 6 dup(?)        ; Buffer to store the ASCII result (max 5 digits + null terminator)
     newline db 0Dh, 0Ah, '$'  ; Carriage return + linefeed for formatting (DOS new line)
 
@@ -11,7 +11,7 @@ main:
     mov ds, ax
 
     ; Convert the number to an ASCII string
-    mov ax, number          ; Load the number into AX
+    mov ax, number+2          ; Load the number into AX
     lea di, buffer + 5      ; Set DI to point to the end of the buffer (space for 5 digits)
     mov byte ptr [di], '$'  ; End string with a DOS terminator ('$')
     dec di                  ; Move DI to point to the first free spot
