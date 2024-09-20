@@ -443,6 +443,8 @@ singleDigit:
     add si,ax
     mov cx,[si]
 
+
+enterQty:
     lea dx,enterQuantity
     mov ah,09h
     int 21h
@@ -463,18 +465,36 @@ singleDigit:
     sub cx, ax
     mov [si], cx
 
-    ;check quantity
-    lea dx, [si]
-    mov ah, 09h
+    CALL double_new_line
+
+    ;display quantity
+    mov ax,[si]
+
+    mov bx,10
+
+convert_ascii_loop:
+    xor dx,dx
+    div bx
+    add dl,'0' ;ASCII digit
+    mov [di], dl
+    dec di
+    cmp ax,0
+    jne convert_ascii_loop
+
+    lea dx, [di]
+    mov ah,09h
     int 21h
 
     call double_new_line
     CALL system_pause
 
+    ret
+
 invalidQty:
     lea dx, invalidQty_msg
     mov ah, 09H
     int 21h
+    jmp enterQty
 
     ;xor bx,bx
     ;mov bx,20 
@@ -516,10 +536,7 @@ invalidQty:
     ; lea dx,[si]
     ; mov ah,09h
     ; int 21h
-
-    ret
 sellItem endp
-
 
 editMenu proc
     edit_start:
