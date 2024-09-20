@@ -74,6 +74,7 @@
     res_msg_colon db ': ', 0
     tempResQty DW ?
 
+
     sellItemMenu        db 13,10,'==========================='
                         db 13,10,'        SELLING MENU'
                         db 13,10,'===========================',13,10,'$'
@@ -551,7 +552,7 @@ res_enterQty:
 
 
 
-convert_ascii_loop:
+res_convert_ascii_loop:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
     mov bx, 10              ; Dividing by 10 to extract the least significant digit
     div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
@@ -559,7 +560,7 @@ convert_ascii_loop:
     mov [di], dl            ; Store the ASCII character in the buffer
     dec di                  ; Move the pointer to the next position
     test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
-    jnz convert_ascii_loop  ; If AX is not zero, continue
+    jnz res_convert_ascii_loop  ; If AX is not zero, continue
     
     ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
@@ -830,7 +831,7 @@ qtySkip:
     lea di,buffer+5
     dec di
 
-res_convert_ascii_loop:
+convert_ascii_loop:
     xor dx, dx              ; Clear DX before division (DX:AX is the dividend)
     mov bx, 10              ; Dividing by 10 to extract the least significant digit
     div bx                  ; AX / 10, result in AX (quotient), remainder in DX (remainder is the digit)
@@ -838,7 +839,7 @@ res_convert_ascii_loop:
     mov [di], dl            ; Store the ASCII character in the buffer
     dec di                  ; Move the pointer to the next position
     test ax, ax             ; Check if the quotient (AX) is 0 (done converting all digits)
-    jnz res_convert_ascii_loop         ; If AX is not zero, continue
+    jnz convert_ascii_loop         ; If AX is not zero, continue
     
     ; Print the result
     lea dx, [di+1]          ; DX points to the first character of the converted number
