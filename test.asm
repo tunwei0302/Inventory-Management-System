@@ -903,12 +903,12 @@ edit_item_price_page proc
     edit_price1:
         call clearScreen
         call itemList
-        call get_price_quantity_offset
+        call get_price_offset
         cmp bl, 0
         je return2
 
-        lea di, inv_price
-        add di, ax
+        ; lea di, inv_price
+        ; add di, ax
 
         ; mov dx, offset item_selected
         ; call PrintString
@@ -1041,11 +1041,10 @@ edit_item_quantity_page proc
     edit_quantity1:
         call clearScreen
         call itemList
-        ; call get_price_quantity_offset
+        call get_quantity_offset
         cmp bl, 0
         je return3
 
-        lea di, inv_quantity
         ; add di, ax
 
         ; mov dx, offset item_selected
@@ -1125,10 +1124,7 @@ edit_item_quantity_page proc
         ; cmp ax, 99
         ; jg quantity_range_error
 
-        mov ah, 09h             ; DOS interrupt to display string
-        lea dx, new_line         ; Point to the new line string
-        int 21h 
-
+        mov ax, 99
         mov [di], ax 
         jmp return3
 
@@ -1198,9 +1194,8 @@ get_name_offset proc
 
 get_name_offset endp
 
-get_price_quantity_offset proc
-    price_quantity_offset1:
-        ; Prompt user to select an item number
+get_price_offset proc
+    price_offset1:
         mov dx, offset prompt_selectNo
         call PrintString
 
@@ -1231,9 +1226,11 @@ get_price_quantity_offset proc
 
         ; Calculate the correct offset for the item name
         sub ax, 1                        ; Convert to zero-based index (0 = first item)
-        mov bx, 20                       ; Each item is 20 bytes long
+        mov bx, 2                       ; Each item is 20 bytes long
         mul bx                              
 
+        lea di, inv_price
+        add di, ax
         ret
 
     item_range_error2:
@@ -1243,12 +1240,65 @@ get_price_quantity_offset proc
 
         call double_new_line
         call system_pause
-        jmp price_quantity_offset1                 ; Go back to the input prompt
+        jmp price_offset1                 ; Go back to the input prompt
 
     return5:
         mov bl, 0
         ret                              ; Return if 'R' or 'r' was detected
-get_price_quantity_offset endp
+get_price_offset endp
+
+get_quantity_offset proc
+    quantity_offset1:
+        mov dx, offset prompt_selectNo
+        call PrintString
+
+        ; Get input from the user
+        lea dx, buffer
+        mov ah, 0ah
+        int 21h
+
+        ; Check if input starts with 'R' or 'r' (special case)
+        cmp byte ptr [buffer+2], 'R'    ; Compare the first byte with 'R'
+        je return8                      ; If equal, jump to return5
+        cmp byte ptr [buffer+2], 'r'    ; Compare with 'r'
+        je return8                      ; If equal, jump to return5
+
+        ; Convert input from string to number
+        lea si, buffer+2
+        xor ax, ax                      ; Clear AX (input number)
+        xor bx, bx                      ; Clear BX (not used)
+        mov cx, 10                      ; Set base for number conversion (decimal)
+
+        call convert_loop                ; Call conversion routine (assuming it's correct)
+
+        ; Check if the number is within the valid range (1-10)
+        cmp ax, 1                        ; Is input < 1?
+        jl item_range_error3              ; Jump if less than 1 (invalid)
+        cmp ax, 10                       ; Is input > 10?
+        jg item_range_error3              ; Jump if greater than 10 (invalid)
+
+        ; Calculate the correct offset for the item name
+        sub ax, 1                        ; Convert to zero-based index (0 = first item)
+        mov bx, 2                       ; Each item is 20 bytes long
+        mul bx                              
+
+        lea di, inv_quantity
+        add di, ax
+        ret
+
+    item_range_error3:
+; Print error message for invalid input
+        mov dx, offset input_error
+        call PrintString
+
+        call double_new_line
+        call system_pause
+        jmp quantity_offset1                 ; Go back to the input prompt
+
+    return8:
+        mov bl, 0
+        ret                              ; Return if 'R' or 'r' was detected
+get_quantity_offset endp
 
 calculateTotal proc
     ret
@@ -1360,7 +1410,6 @@ getDateTime proc
     call PrintString
     ret
 getDateTime endp
-
 
 PrintNumber proc
     mov ah, 02h        
