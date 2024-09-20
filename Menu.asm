@@ -51,8 +51,6 @@
              "SCISSORS           $", "NOTEBOOK           $", "MARKER             $", "PAPERCLIPS         $", "STAPLER            $"   ;item name
         inv_quantity    DW 20, 1, 15, 2, 13, 2, 18, 0, 1, 0 ;quantity
         inv_price       dd 450, 420, 390, 370, 620, 500, 4550, 1720, 1150, 2200   ;price
-    
-    current_item_count db 10d
 
     ; Main Menu
     mainMenuOption      db 13,10,' Inventory Management System ',13,10
@@ -78,9 +76,7 @@
                         db 13, 10, '1. Edit Item Name'
                         db 13, 10, '2. Edit Item Price'
                         db 13, 10, '3. Edit Item Quantity'
-                        db 13, 10, '4. Add Item'
-                        db 13, 10, '5. Delete Item'
-                        db 13, 10, '6. Return'
+                        db 13, 10, '4. Return'
                         db 13, 10, 'Enter your choice > $'
 
     prev_name           db 13, 10, 'Item Previous Name: $'
@@ -93,14 +89,8 @@
     price_range         db 13, 10, 'Please Enter Price between [00.01 - 99.99]$'
 
     prev_quantity       db 13, 10, 'Previous Quantity: $'
-    new_quantity        db 13, 10, 'New Quantity: $'
-
-    add_item_name       db 13, 10, 'New Item Name: $'
-    add_item_price      db 13, 10, 'New Item Price: $'
-    add_item_quantity   db 13, 10, 'New Item Quantity: $'
-
-    delete_item         db 13, 10, 'Delete Item: '
-                        db 13, 10, 'Enter Item No you wish to DELETE: $'
+    new_quantity        db 13, 10, 'New Quantity [0-99] [Enter R to Return]: $'
+    quantity_range      db 13, 10, 'Please Enter Quantity between [0 - 99]$'
 
     input_con           db 13, 10, 'Confirm Action [Y=yes : N=No]: $'
     delete_con          db 13, 10, 'Are You Sure You Want To DELETE This Item!! [Y=yes : N=No]: $'
@@ -565,18 +555,8 @@ editMenu proc
     skip1_3:
         cmp al,4
         jne skip1_4
-        call add_item_page
-        jmp edit_start
-    skip1_4:
-        cmp al,5
-        jne skip1_5
-        call delete_item_page
-        jmp edit_start
-    skip1_5:
-        cmp al,6
-        jne skip1_6
         ret
-    skip1_6:
+    skip1_4:
         mov dx, offset inputError
         mov ah,09h
         int 21h
@@ -584,16 +564,20 @@ editMenu proc
         call double_new_line
         call system_pause
         jmp edit_start
-
 editMenu endp
 
 edit_item_name_page proc
     edit_name1:
         ;call selectItem
+        call get_name_offset
         mov dx, offset prev_name
         call PrintString
 
         lea dx, inv_name 
+        call PrintString
+
+        mov bx, ax
+        lea dx, [inv_name+bx] 
         call PrintString
 
         mov dx, offset new_name
@@ -681,10 +665,10 @@ edit_item_price_page proc
         lea dx, input_buffer
         mov ah, 0Ah
         int 21h
-
-        cmp [input_buffer+0], 'R'
+        
+        cmp [input_buffer+2], 'R'
         je return2
-        cmp [input_buffer+0], 'r'
+        cmp [input_buffer+2], 'r'
         je return2
 
         mov dx, offset input_con
@@ -703,8 +687,7 @@ edit_item_price_page proc
         jne wrong_input2
 
     edit_price2:
-        ; Replace inv name with temp name
-        lea si, input_buffer             ; Point to the new name (after length byte)
+        lea si, input_buffer + 2
         xor ax, ax 
         xor bx, bx 
         mov cx, 5
@@ -713,8 +696,6 @@ edit_item_price_page proc
         check_price1:
             cmp cx, 3
             je check_price2
-            cmp cx, 0
-            je check_price_range
             mov bl, [si]
             sub bl, '0'
 
@@ -729,9 +710,19 @@ edit_item_price_page proc
             mov bl, [si]
             cmp bl, '.'
             jne price_format_error
-            mov cx, 2
             inc si
-            jmp check_price1
+            mov cx, 2
+
+        check_price3:
+            mov bl, [si]
+            sub bl, '0'
+            cmp bl, 9
+            jg price_format_error
+            mul dx ; Multiply AX by 10
+            add ax, bx ; Add the fractional digit
+            inc si
+            loop check_price3
+            jmp check_price_range
 
     return2:
         ret
@@ -753,12 +744,13 @@ edit_item_price_page proc
         jmp edit_price1
 
     check_price_range:
-        mov temp_price, ax
         cmp ax, 1
         jl price_range_error
         cmp ax, 9999
         jg price_range_error
-        ; call 
+
+        lea di, inv_price   ; Load the address of inv_price into DI
+        mov [di], ax        ; Replace the first element (2000) with the value in AX
         jmp return2
 
     wrong_input2: 
@@ -773,27 +765,137 @@ edit_item_price_page endp
 
 edit_item_quantity_page proc
     edit_quantity1:
-        mov dx, offset prev_price
+        ;call selectItem
+        ; mov dx, offset item_selected
+        ; call PrintString
+
+        ; lea dx, inv_price
+        ; call PrintString
+
+        mov dx, offset new_quantity
         call PrintString
 
         lea dx, input_buffer
-        mov ah, 0Ah ; Buffered input
+        mov ah, 0Ah
         int 21h
 
-        ; call string_to_number
-        ; mov amount, ax
+        call double_new_line
+        lea dx, input_buffer+2
+        call PrintString
 
-        overwrite_quantity:
+        cmp [input_buffer+2], 'R'
+        je return3
+        cmp [input_buffer+2], 'r'
+        je return3
+
+        mov dx, offset input_con
+        call PrintString
+
+        mov ah, 01h
+        int 21H    
+        cmp al, "Y"
+        je edit_quantity2
+        cmp al, "y"
+        je edit_quantity2
+        cmp al, "N"
+        je edit_quantity1
+        cmp al, "n"
+        je edit_quantity1
+        jne wrong_input3
+
+    edit_quantity2:
+        lea si, input_buffer+2
+        mov cl, [input_buffer+1]
+        xor ax, ax 
+        xor bx, bx 
+        mov dx, 10 
+
+        check_quantity1:
+            mov bl, [si]
+            sub bl, '0'
+
+            mul dx ; Multiply AX by 10
+            add ax, bx ; Add the digit to AX
+            inc si ; Move to the next character
+            loop check_quantity1
+            jmp check_quantity_range
+
+    return3:
+        ret
+
+    quantity_range_error:
+        mov dx, offset quantity_range
+        call PrintString
+        
+        call double_new_line
+        call system_pause
+        jmp edit_quantity1
+
+    check_quantity_range:
+        cmp ax, 0
+        jl quantity_range_error
+        cmp ax, 99
+        jg quantity_range_error
+
+        lea di, inv_quantity   
+        mov [di], ax        
+        jmp return2
+
+    wrong_input3: 
+        mov dx, offset input_error
+        call PrintString
+        
+        call double_new_line
+        call system_pause
+        jmp edit_quantity1
 
 edit_item_quantity_page endp
 
-add_item_page proc
+get_name_offset proc
+    ; name_offset1:
+    ;     mov dx, offset new_name
+    ;     call PrintString
 
-add_item_page endp
+    ;     mov ah, 01h 
+    ;     int 21h
+        
+    ;     cmp al, "R"
+    ;     je return4
+    ;     cmp al, "r"
+    ;     je return4
 
-delete_item_page proc
+    ;     sub al, 
+    ;     cmp al, 0
+    ;     jl item_range_error
+    ;     cmp al, 10
+    ;     jg item_range_error 
+    ;     cmp al, 1 
+    ;     je name_offset2
+    ;     jmp name_offset3
 
-delete_item_page endp
+    ; name_offset2: 
+    ;     ; mov name_address, 0
+    ;     jmp return4
+
+    ; name_offset3:
+    ;     mov ah, 0
+    ;     mov bx, 20
+    ;     mul bx
+    ;     ; name_address, ax
+    ;     jmp return4
+
+    ; item_range_error:
+    ;     ; mov dx, offset
+    ;     ; call PrintString
+
+    ;     call double_new_line
+    ;     call system_pause
+    ;     jmp name_offset1
+
+    ; return4:
+    ;     ret
+
+get_name_offset endp
 
 calculateTotal proc
     ret
