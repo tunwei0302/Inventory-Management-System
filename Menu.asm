@@ -90,6 +90,11 @@
     tempInvIndex dw ?
     sellAmount dw ?
     invHead db 'ID  NAME          QUANTITY   PRICE',13,10,'$'
+    totalPrice db 'Total Price > $'
+    totalIntPrice dw 0
+    totalFloatPrice dw 0
+    inv_priceBuffer dw 2
+    inv_quantityBuffer dw 2
 
     ; Edit Item
     edit_menu           db 13, 10, '+==========+==========+'
@@ -377,7 +382,7 @@ restock proc
     int 21h ; Call DOS interrupt
     
     call itemList
-
+    
     lea dx,res_enterChoice
     mov ah,09h
     int 21h
@@ -394,7 +399,8 @@ restock proc
     CALL convert_loop
 
     sub ax,1
-
+    mov tempInvIndex,ax
+    
     mov bx,2
     lea si,inv_quantity
     mul bx
@@ -621,6 +627,27 @@ singleDigit:
     je skip6
     jmp itemLists
 skip6:
+    ;mov ah,9
+    ;int 21h
+    ;lea dx,totalPrice
+    ;mov ah,09h
+    ;int 21h
+;
+    ;call getTotalPrice
+;
+    ;xor ax,ax
+    ;mov ax,totalIntPrice
+    ;call printPrice
+;
+    ;xor ax,ax
+    ;mov dx,2eh
+    ;mov ah,02h    
+    ;int 21h
+;
+    ;mov ax,totalFloatPrice
+    ;call printPrice
+
+
     ret
 itemList endp
 
@@ -1389,6 +1416,77 @@ Convertdb proc
     
     ret
 Convertdb endp
+
+getTotalPrice proc
+    mov cx,0
+
+addTotal:
+    
+    lea si,inv_quantityBuffer
+    mov ax,[si]
+    mul cx
+    
+    xor bx,bx
+
+    lea si,inv_quantity
+    add si,ax
+    mov bx,[si]
+
+    xor ax,ax
+    lea si,inv_priceBuffer
+    mov ax,[si]
+    mul cx
+
+    lea si,inv_price
+    add si,ax
+    mov ax,[si]
+
+    mul bx
+
+    xor bx,bx
+    mov bx,100
+    div bx
+
+    add totalIntPrice,ax
+    add totalFloatPrice,dx
+    inc cx
+    cmp cx,10
+    jne addTotal
+
+    xor ax,ax
+    xor dx,dx
+
+    lea si,totalFloatPrice
+    mov dx,[si]
+    mov ax,dx
+    xor dx,dx
+    mov bx,100
+    div bx
+    
+
+
+    add totalIntPrice,ax
+    mov totalFloatPrice,dx
+
+    ret
+getTotalPrice endp
+
+printPrice proc
+;convert to string
+    mov buffer,0
+    lea di,buffer+5
+    mov byte ptr [di],'$'
+    dec di
+
+    call Convertdb
+
+    lea dx, [di+1]          
+    mov ah, 09h             
+    int 21h                 
+
+    ret
+
+printPrice endp
 
 
 end main
